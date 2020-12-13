@@ -4,16 +4,15 @@ authors = [
   "Emilio Cobos Álvarez <emilio@crisal.io>",
   "Nick Fitzgerald <fitzgen@gmail.com>",
   "The Servo project developers",
+  "Adrian Taylor <ade@hohum.me.uk>",
 ]
-description = "Automatically generates Rust FFI bindings to C and C++ libraries."
+description = "Automatically generates Rust FFI bindings to C and C++ libraries. Version adjusted for cxx."
 keywords = ["bindings", "ffi", "code-generation"]
 categories = ["external-ffi-bindings", "development-tools::ffi"]
 license = "BSD-3-Clause"
-name = "bindgen"
+name = "autocxx-bindgen"
 readme = "README.md"
-repository = "https://github.com/rust-lang/rust-bindgen"
-documentation = "https://docs.rs/bindgen"
-homepage = "https://rust-lang.github.io/rust-bindgen/"
+repository = "https://github.com/adetaylor/rust-bindgen"
 version = "0.56.0"
 edition = "2018"
 build = "build.rs"
@@ -26,9 +25,6 @@ include = [
   "src/*.rs",
   "src/**/*.rs",
 ]
-
-[badges]
-travis-ci = { repository = "rust-lang/rust-bindgen" }
 
 [lib]
 path = "src/lib.rs"

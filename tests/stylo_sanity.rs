@@ -1,6 +1,6 @@
 // Don't want to copy that nasty `cfg` below...
 #[allow(unused_extern_crates)]
-extern crate bindgen;
+extern crate autocxx_bindgen;
 
 /// A sanity test that we can generate bindings for Stylo.
 ///

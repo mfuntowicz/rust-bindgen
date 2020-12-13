@@ -2418,6 +2418,7 @@ pub fn clang_version() -> ClangVersion {
 /// When running in side a `build.rs` script, this can be used to make cargo invalidate the
 /// generated bindings whenever any of the files included from the header change:
 /// ```
+/// use autocxx_bindgen as bindgen;
 /// use bindgen::builder;
 /// let bindings = builder()
 ///     .header("path/to/input/header")

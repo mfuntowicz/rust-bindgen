@@ -1,4 +1,4 @@
-extern crate bindgen;
+use autocxx_bindgen as bindgen;
 extern crate clap;
 extern crate diff;
 #[cfg(feature = "logging")]
