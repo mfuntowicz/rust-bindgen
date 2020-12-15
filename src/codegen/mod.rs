@@ -3749,8 +3749,10 @@ impl CodeGenerator for Function {
         // suffix.
         let times_seen = result.overload_number(&canonical_name);
         if times_seen > 0 {
-            attributes.push(attributes::original_name(&canonical_name));
             write!(&mut canonical_name, "{}", times_seen).unwrap();
+        }
+        if canonical_name != self.name() {
+            attributes.push(attributes::original_name(self.name()));
         }
 
         let abi = match signature.abi() {
