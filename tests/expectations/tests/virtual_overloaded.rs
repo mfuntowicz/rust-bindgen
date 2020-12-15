@@ -31,6 +31,7 @@ impl Default for C {
     }
 }
 extern "C" {
+    #[bindgen_original_name("do_thing")]
     #[link_name = "\u{1}_ZN1C8do_thingEc"]
     pub fn C_do_thing(
         this: *mut ::std::os::raw::c_void,
@@ -38,6 +39,7 @@ extern "C" {
     );
 }
 extern "C" {
+    #[bindgen_original_name("do_thing")]
     #[link_name = "\u{1}_ZN1C8do_thingEi"]
     pub fn C_do_thing1(
         this: *mut ::std::os::raw::c_void,
