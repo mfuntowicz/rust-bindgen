@@ -20,8 +20,6 @@
 #define TESTMACRO_STRING_EXPR ("string")
 #define TESTMACRO_STRING_FUNC_NON_UTF8(x) (x "ÿÿ") /* invalid UTF-8 on purpose */
 
-#include <cwchar>
-
 enum {
   MY_ANNOYING_MACRO =
 #define MY_ANNOYING_MACRO 1
@@ -228,3 +226,9 @@ struct my_prefixed_templated_foo {
 my_prefixed_templated_foo<my_prefixed_baz> TEMPLATED_CONST_VALUE;
 
 void my_prefixed_function_to_remove();
+
+typedef union {
+  double v[4];
+} Coord;
+
+Coord coord(double x, double y, double z, double t);

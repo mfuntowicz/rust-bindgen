@@ -175,16 +175,19 @@ fn test_bitfields_seventh() {
 fn test_bitfield_constructors() {
     use std::mem;
     let mut first = bindings::bitfields::First {
+        _bitfield_align_1: [],
         _bitfield_1: bindings::bitfields::First::new_bitfield_1(1, 2, 3),
     };
     assert!(unsafe { first.assert(1, 2, 3) });
 
     let mut second = bindings::bitfields::Second {
+        _bitfield_align_1: [],
         _bitfield_1: bindings::bitfields::Second::new_bitfield_1(1337, true),
     };
     assert!(unsafe { second.assert(1337, true) });
 
     let mut third = bindings::bitfields::Third {
+        _bitfield_align_1: [],
         _bitfield_1: bindings::bitfields::Third::new_bitfield_1(
             42,
             false,
@@ -255,4 +258,14 @@ fn test_matching_with_rename() {
 fn test_macro_customintkind_path() {
     let v: &std::any::Any = &bindings::TESTMACRO_CUSTOMINTKIND_PATH;
     assert!(v.is::<MacroInteger>())
+}
+
+// https://github.com/rust-lang/rust-bindgen/issues/1973
+#[cfg_attr(target_arch = "aarch64", should_panic)] // This line should be removed after the bug linked above is fixed
+#[test]
+fn test_homogeneous_aggregate_float_union() {
+    unsafe {
+        let coord = &bindings::coord(1., 2., 3., 4.);
+        assert_eq!([1., 2., 3., 4.], coord.v)
+    }
 }
