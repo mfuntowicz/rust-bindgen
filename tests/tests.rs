@@ -146,7 +146,7 @@ fn compare_generated_header(
             expectation.push("libclang-3.9");
         } else {
             match clang_version().parsed {
-                None => {}
+                None => expectation.push("libclang-9"),
                 Some(version) => {
                     let (maj, min) = version;
                     let version_str = if maj >= 9 {
@@ -267,7 +267,7 @@ fn compare_generated_header(
         if let Err(e) =
             compare_generated_header(&header, roundtrip_builder, false)
         {
-            return Err(Error::new(ErrorKind::Other, format!("Checking CLI flags roundtrip errored! You probably need to fix Builder::command_line_args. {}", e)));
+            return Err(Error::new(ErrorKind::Other, format!("Checking CLI flags roundtrip errored! You probably need to fix Builder::command_line_flags. {}", e)));
         }
     }
 
