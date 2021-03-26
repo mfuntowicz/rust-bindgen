@@ -86,6 +86,12 @@ pub mod attributes {
             #[bindgen_arg_type_reference(#arg_name)]
         }
     }
+
+    pub fn is_pure_virtual() -> TokenStream {
+        quote! {
+            #[bindgen_pure_virtual]
+        }
+    }
 }
 
 /// Generates a proper type for a field or type with a given `Layout`, that is,

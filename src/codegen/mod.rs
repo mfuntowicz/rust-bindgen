@@ -3805,14 +3805,11 @@ impl CodeGenerator for Function {
 
         // Pure virtual methods have no actual symbol, so we can't generate
         // something meaningful for them.
-        match self.kind() {
+        let is_pure_virtual = match self.kind() {
             FunctionKind::Method(ref method_kind)
-                if method_kind.is_pure_virtual() =>
-            {
-                return;
-            }
-            _ => {}
-        }
+                if method_kind.is_pure_virtual() => true,
+            _ => false
+        };
 
         // Similar to static member variables in a class template, we can't
         // generate bindings to template functions, because the set of
@@ -3858,6 +3855,10 @@ impl CodeGenerator for Function {
 
         if let Some(comment) = item.comment(ctx) {
             attributes.push(attributes::doc(comment));
+        }
+
+        if is_pure_virtual {
+            attributes.push(attributes::is_pure_virtual());
         }
 
         // Handle overloaded functions by giving each overload its own unique
