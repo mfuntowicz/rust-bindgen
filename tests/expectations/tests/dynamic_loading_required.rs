@@ -8,11 +8,14 @@
 extern crate libloading;
 pub struct TestLib {
     __library: ::libloading::Library,
-    pub foo: Result<
-        unsafe extern "C" fn(x: ::std::os::raw::c_int) -> ::std::os::raw::c_int,
-        ::libloading::Error,
-    >,
-    pub foo1: Result<unsafe extern "C" fn(x: f32) -> f32, ::libloading::Error>,
+    pub foo: unsafe extern "C" fn(
+        x: ::std::os::raw::c_int,
+        y: ::std::os::raw::c_int,
+    ) -> ::std::os::raw::c_int,
+    pub bar: unsafe extern "C" fn(
+        x: *mut ::std::os::raw::c_void,
+    ) -> ::std::os::raw::c_int,
+    pub baz: unsafe extern "C" fn() -> ::std::os::raw::c_int,
 }
 impl TestLib {
     pub unsafe fn new<P>(path: P) -> Result<Self, ::libloading::Error>
@@ -29,21 +32,30 @@ impl TestLib {
         L: Into<::libloading::Library>,
     {
         let __library = library.into();
-        let foo = __library.get(b"foo\0").map(|sym| *sym);
-        let foo1 = __library.get(b"foo1\0").map(|sym| *sym);
+        let foo = __library.get(b"foo\0").map(|sym| *sym)?;
+        let bar = __library.get(b"bar\0").map(|sym| *sym)?;
+        let baz = __library.get(b"baz\0").map(|sym| *sym)?;
         Ok(TestLib {
             __library,
             foo,
-            foo1,
+            bar,
+            baz,
         })
     }
     pub unsafe fn foo(
         &self,
         x: ::std::os::raw::c_int,
+        y: ::std::os::raw::c_int,
     ) -> ::std::os::raw::c_int {
-        (self.foo.as_ref().expect("Expected function, got error."))(x)
+        (self.foo)(x, y)
     }
-    pub unsafe fn foo1(&self, x: f32) -> f32 {
-        (self.foo1.as_ref().expect("Expected function, got error."))(x)
+    pub unsafe fn bar(
+        &self,
+        x: *mut ::std::os::raw::c_void,
+    ) -> ::std::os::raw::c_int {
+        (self.bar)(x)
+    }
+    pub unsafe fn baz(&self) -> ::std::os::raw::c_int {
+        (self.baz)()
     }
 }

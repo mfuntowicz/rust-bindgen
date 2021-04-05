@@ -423,37 +423,36 @@ trait CodeGenerator {
     /// Extra information from the caller.
     type Extra;
 
+    /// Extra information returned to the caller.
+    type Return;
+
     fn codegen<'a>(
         &self,
         ctx: &BindgenContext,
         result: &mut CodegenResult<'a>,
         extra: &Self::Extra,
-    );
+    ) -> Self::Return;
 }
 
-impl CodeGenerator for Item {
-    type Extra = ();
-
-    fn codegen<'a>(
+impl Item {
+    fn process_before_codegen(
         &self,
         ctx: &BindgenContext,
-        result: &mut CodegenResult<'a>,
-        _extra: &(),
-    ) {
+        result: &mut CodegenResult,
+    ) -> bool {
         if !self.is_enabled_for_codegen(ctx) {
-            return;
+            return false;
         }
 
         if self.is_blocklisted(ctx) || result.seen(self.id()) {
             debug!(
-                "<Item as CodeGenerator>::codegen: Ignoring hidden or seen: \
+                "<Item as CodeGenerator>::process_before_codegen: Ignoring hidden or seen: \
                  self = {:?}",
                 self
             );
-            return;
+            return false;
         }
 
-        debug!("<Item as CodeGenerator>::codegen: self = {:?}", self);
         if !ctx.codegen_items().contains(&self.id()) {
             // TODO(emilio, #453): Figure out what to do when this happens
             // legitimately, we could track the opaque stuff and disable the
@@ -462,6 +461,24 @@ impl CodeGenerator for Item {
         }
 
         result.set_seen(self.id());
+        true
+    }
+}
+
+impl CodeGenerator for Item {
+    type Extra = ();
+    type Return = ();
+
+    fn codegen<'a>(
+        &self,
+        ctx: &BindgenContext,
+        result: &mut CodegenResult<'a>,
+        _extra: &(),
+    ) {
+        debug!("<Item as CodeGenerator>::codegen: self = {:?}", self);
+        if !self.process_before_codegen(ctx, result) {
+            return;
+        }
 
         match *self.kind() {
             ItemKind::Module(ref module) => {
@@ -482,6 +499,7 @@ impl CodeGenerator for Item {
 
 impl CodeGenerator for Module {
     type Extra = Item;
+    type Return = ();
 
     fn codegen<'a>(
         &self,
@@ -573,6 +591,8 @@ impl CodeGenerator for Module {
 
 impl CodeGenerator for Var {
     type Extra = Item;
+    type Return = ();
+
     fn codegen<'a>(
         &self,
         ctx: &BindgenContext,
@@ -699,6 +719,7 @@ impl CodeGenerator for Var {
 
 impl CodeGenerator for Type {
     type Extra = Item;
+    type Return = ();
 
     fn codegen<'a>(
         &self,
@@ -1006,6 +1027,7 @@ impl<'a> Vtable<'a> {
 
 impl<'a> CodeGenerator for Vtable<'a> {
     type Extra = Item;
+    type Return = ();
 
     fn codegen<'b>(
         &self,
@@ -1050,6 +1072,7 @@ impl<'a> TryToRustTy for Vtable<'a> {
 
 impl CodeGenerator for TemplateInstantiation {
     type Extra = Item;
+    type Return = ();
 
     fn codegen<'a>(
         &self,
@@ -1666,6 +1689,7 @@ impl<'a> FieldCodegen<'a> for Bitfield {
 
 impl CodeGenerator for CompInfo {
     type Extra = Item;
+    type Return = ();
 
     fn codegen<'a>(
         &self,
@@ -2264,13 +2288,15 @@ impl MethodCodegen for Method {
 
         // First of all, output the actual function.
         let function_item = ctx.resolve_item(self.signature());
-        if function_item.is_blocklisted(ctx) {
-            // We shouldn't emit a method declaration if the function is blocklisted
+        if !function_item.process_before_codegen(ctx, result) {
             return;
         }
-        function_item.codegen(ctx, result, &());
-
         let function = function_item.expect_function();
+        let times_seen = function.codegen(ctx, result, &function_item);
+        let times_seen = match times_seen {
+            Some(seen) => seen,
+            None => return,
+        };
         let signature_item = ctx.resolve_item(function.signature());
         let mut name = match self.kind() {
             MethodKind::Constructor => "new".into(),
@@ -2305,7 +2331,11 @@ impl MethodCodegen for Method {
             name.push_str(&count.to_string());
         }
 
-        let function_name = ctx.rust_ident(function_item.canonical_name(ctx));
+        let mut function_name = function_item.canonical_name(ctx);
+        if times_seen > 0 {
+            write!(&mut function_name, "{}", times_seen).unwrap();
+        }
+        let function_name = ctx.rust_ident(function_name);
         let (mut args, args_attributes) = utils::fnsig_arguments(ctx, signature);
         let (mut ret, ret_attr) = utils::fnsig_return_ty(ctx, signature);
 
@@ -2812,6 +2842,7 @@ impl<'a> EnumBuilder<'a> {
 
 impl CodeGenerator for Enum {
     type Extra = Item;
+    type Return = ();
 
     fn codegen<'a>(
         &self,
@@ -3787,19 +3818,23 @@ impl TryToRustTy for FunctionSig {
 impl CodeGenerator for Function {
     type Extra = Item;
 
+    /// If we've actually generated the symbol, the number of times we've seen
+    /// it.
+    type Return = Option<u32>;
+
     fn codegen<'a>(
         &self,
         ctx: &BindgenContext,
         result: &mut CodegenResult<'a>,
         item: &Item,
-    ) {
+    ) -> Self::Return {
         debug!("<Function as CodeGenerator>::codegen: item = {:?}", item);
         debug_assert!(item.is_enabled_for_codegen(ctx));
 
         // We can't currently do anything with Internal functions so just
         // avoid generating anything for them.
         match self.linkage() {
-            Linkage::Internal => return,
+            Linkage::Internal => return None,
             Linkage::External => {}
         }
 
@@ -3816,7 +3851,7 @@ impl CodeGenerator for Function {
         // instantiations is open ended and we have no way of knowing which
         // monomorphizations actually exist.
         if !item.all_template_params(ctx).is_empty() {
-            return;
+            return None;
         }
 
         let name = self.name();
@@ -3829,7 +3864,7 @@ impl CodeGenerator for Function {
             // TODO: Maybe warn here if there's a type/argument mismatch, or
             // something?
             if result.seen_function(seen_symbol_name) {
-                return;
+                return None;
             }
             result.saw_function(seen_symbol_name);
         }
@@ -3861,12 +3896,6 @@ impl CodeGenerator for Function {
             attributes.push(attributes::is_pure_virtual());
         }
 
-        // Handle overloaded functions by giving each overload its own unique
-        // suffix.
-        let times_seen = result.overload_number(&canonical_name);
-        if times_seen > 0 {
-            write!(&mut canonical_name, "{}", times_seen).unwrap();
-        }
         if canonical_name != self.name() {
             attributes.push(attributes::original_name(self.name()));
         }
@@ -3874,11 +3903,11 @@ impl CodeGenerator for Function {
         let abi = match signature.abi() {
             Abi::ThisCall if !ctx.options().rust_features().thiscall_abi => {
                 warn!("Skipping function with thiscall ABI that isn't supported by the configured Rust target");
-                return;
+                return None;
             }
             Abi::Win64 if signature.is_variadic() => {
                 warn!("Skipping variadic function with Win64 ABI that isn't supported");
-                return;
+                return None;
             }
             Abi::Unknown(unknown_abi) => {
                 panic!(
@@ -3888,6 +3917,13 @@ impl CodeGenerator for Function {
             }
             abi => abi,
         };
+
+        // Handle overloaded functions by giving each overload its own unique
+        // suffix.
+        let times_seen = result.overload_number(&canonical_name);
+        if times_seen > 0 {
+            write!(&mut canonical_name, "{}", times_seen).unwrap();
+        }
 
         let link_name = mangled_name.unwrap_or(name);
         if !utils::names_will_be_identical_after_mangling(
@@ -3930,6 +3966,7 @@ impl CodeGenerator for Function {
                 ident,
                 abi,
                 signature.is_variadic(),
+                ctx.options().dynamic_link_require_all,
                 args,
                 args_identifiers,
                 ret,
@@ -3938,6 +3975,7 @@ impl CodeGenerator for Function {
         } else {
             result.push(tokens);
         }
+        Some(times_seen)
     }
 }
 
@@ -3994,6 +4032,7 @@ fn objc_method_codegen(
 
 impl CodeGenerator for ObjCInterface {
     type Extra = Item;
+    type Return = ();
 
     fn codegen<'a>(
         &self,

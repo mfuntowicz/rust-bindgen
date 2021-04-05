@@ -75,7 +75,16 @@ impl TestLib {
     where
         P: AsRef<::std::ffi::OsStr>,
     {
-        let __library = ::libloading::Library::new(path)?;
+        let library = ::libloading::Library::new(path)?;
+        Self::from_library(library)
+    }
+    pub unsafe fn from_library<L>(
+        library: L,
+    ) -> Result<Self, ::libloading::Error>
+    where
+        L: Into<::libloading::Library>,
+    {
+        let __library = library.into();
         let foo = __library.get(b"foo\0").map(|sym| *sym);
         let bar = __library.get(b"bar\0").map(|sym| *sym);
         Ok(TestLib {
@@ -88,11 +97,9 @@ impl TestLib {
         &self,
         x: *mut ::std::os::raw::c_void,
     ) -> ::std::os::raw::c_int {
-        let sym = self.foo.as_ref().expect("Expected function, got error.");
-        (sym)(x)
+        (self.foo.as_ref().expect("Expected function, got error."))(x)
     }
     pub unsafe fn bar(&self) -> () {
-        let sym = self.bar.as_ref().expect("Expected function, got error.");
-        (sym)()
+        (self.bar.as_ref().expect("Expected function, got error."))()
     }
 }
