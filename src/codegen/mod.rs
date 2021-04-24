@@ -3458,6 +3458,7 @@ impl TryToOpaque for Type {
 enum RustTyAnnotation {
     None,
     Reference,
+    HasUnusedTemplateArgs,
 }
 
 struct RustTy {
@@ -3483,6 +3484,17 @@ impl RustTy {
         Self {
             ts,
             annotation: RustTyAnnotation::Reference,
+        }
+    }
+
+    fn with_unused_template_args(ts: proc_macro2::TokenStream, has_unused_args: bool) -> Self {
+        Self {
+            ts,
+            annotation: if has_unused_args {
+                RustTyAnnotation::HasUnusedTemplateArgs
+            } else {
+                RustTyAnnotation::None
+            }
         }
     }
 
@@ -3780,13 +3792,18 @@ impl TryToRustTy for TemplateInstantiation {
             })
             .collect::<error::Result<Vec<_>>>()?;
 
+        let has_unused_template_args = def_params.iter()
+            // Only pass type arguments for the type parameters that
+            // the def uses.
+            .any(|param| !ctx.uses_template_parameter(def.id(), *param));
+
         if template_args.is_empty() {
-            return Ok(ty.into());
+            return Ok(RustTy::with_unused_template_args(ty, has_unused_template_args));
         }
 
-        Ok(quote! {
+        Ok(RustTy::with_unused_template_args(quote! {
             #ty < #( #template_args ),* >
-        }.into())
+        }, has_unused_template_args))
     }
 }
 
@@ -4611,6 +4628,7 @@ pub mod utils {
             (ts, match annotations {
                 super::RustTyAnnotation::None => quote! {},
                 super::RustTyAnnotation::Reference => attributes::ret_type_reference(),
+                super::RustTyAnnotation::HasUnusedTemplateArgs => attributes::unused_template_param_in_arg_or_return(),
             })
         }
     }
@@ -4677,7 +4695,8 @@ pub mod utils {
                 let arg_name = ctx.rust_ident(arg_name);
                 let arg_attr = match arg_details.annotation {
                     RustTyAnnotation::None => quote! {},
-                    RustTyAnnotation::Reference => attributes::arg_type_reference(&arg_name)
+                    RustTyAnnotation::Reference => attributes::arg_type_reference(&arg_name),
+                    RustTyAnnotation::HasUnusedTemplateArgs => attributes::unused_template_param_in_arg_or_return(),
                 };
 
                 (quote! {
