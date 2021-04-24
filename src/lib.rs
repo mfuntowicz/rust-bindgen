@@ -51,6 +51,7 @@ macro_rules! doc_mod {
 
 mod clang;
 mod codegen;
+mod deps;
 mod features;
 mod ir;
 mod parse;
@@ -604,6 +605,19 @@ impl Builder {
         self
     }
 
+    /// Add a depfile output which will be written alongside the generated bindings.
+    pub fn depfile<H: Into<String>, D: Into<PathBuf>>(
+        mut self,
+        output_module: H,
+        depfile: D,
+    ) -> Builder {
+        self.options.depfile = Some(deps::DepfileSpec {
+            output_module: output_module.into(),
+            depfile_path: depfile.into(),
+        });
+        self
+    }
+
     /// Add `contents` as an input C/C++ header named `name`.
     ///
     /// The file `name` will be added to the clang arguments.
@@ -694,6 +708,12 @@ impl Builder {
     pub fn allowlist_recursively(mut self, doit: bool) -> Self {
         self.options.allowlist_recursively = doit;
         self
+    }
+
+    /// Deprecated alias for allowlist_recursively.
+    #[deprecated(note = "Use allowlist_recursively instead")]
+    pub fn whitelist_recursively(self, doit: bool) -> Self {
+        self.allowlist_recursively(doit)
     }
 
     /// Generate `#[macro_use] extern crate objc;` instead of `use objc;`
@@ -1399,7 +1419,7 @@ impl Builder {
     pub fn generate(mut self) -> Result<Bindings, ()> {
         // Add any extra arguments from the environment to the clang command line.
         if let Some(extra_clang_args) =
-            env::var("BINDGEN_EXTRA_CLANG_ARGS").ok()
+            get_target_dependent_env_var("BINDGEN_EXTRA_CLANG_ARGS")
         {
             // Try to parse it with shell quoting. If we fail, make it one single big argument.
             if let Some(strings) = shlex::split(&extra_clang_args) {
@@ -1411,11 +1431,13 @@ impl Builder {
 
         // Transform input headers to arguments on the clang command line.
         self.options.input_header = self.input_headers.pop();
-        self.options
-            .clang_args
-            .extend(self.input_headers.drain(..).flat_map(|header| {
-                iter::once("-include".into()).chain(iter::once(header))
-            }));
+        self.options.extra_input_headers = self.input_headers;
+        self.options.clang_args.extend(
+            self.options.extra_input_headers.iter().flat_map(|header| {
+                iter::once("-include".into())
+                    .chain(iter::once(header.to_string()))
+            }),
+        );
 
         self.options.input_unsaved_files.extend(
             self.input_header_contents
@@ -1618,6 +1640,9 @@ struct BindgenOptions {
     /// The explicit rustfmt path.
     rustfmt_path: Option<PathBuf>,
 
+    /// The path to which we should write a Makefile-syntax depfile (if any).
+    depfile: Option<deps::DepfileSpec>,
+
     /// The set of types that we should have bindings for in the generated
     /// code.
     ///
@@ -1778,6 +1803,9 @@ struct BindgenOptions {
 
     /// The input header file.
     input_header: Option<String>,
+
+    /// Any additional input header files.
+    extra_input_headers: Vec<String>,
 
     /// Unsaved files for input.
     input_unsaved_files: Vec<clang::UnsavedFile>,
@@ -1957,6 +1985,7 @@ impl Default for BindgenOptions {
             blocklisted_items: Default::default(),
             opaque_types: Default::default(),
             rustfmt_path: Default::default(),
+            depfile: Default::default(),
             allowlisted_types: Default::default(),
             allowlisted_functions: Default::default(),
             allowlisted_vars: Default::default(),
@@ -2002,6 +2031,7 @@ impl Default for BindgenOptions {
             module_lines: HashMap::default(),
             clang_args: vec![],
             input_header: None,
+            extra_input_headers: vec![],
             input_unsaved_files: vec![],
             parse_callbacks: None,
             codegen_config: CodegenConfig::all(),
@@ -2549,6 +2579,21 @@ pub fn clang_version() -> ClangVersion {
         parsed: None,
         full: raw_v.clone(),
     }
+}
+
+/// Looks for the env var `var_${TARGET}`, and falls back to just `var` when it is not found.
+fn get_target_dependent_env_var(var: &str) -> Option<String> {
+    if let Ok(target) = env::var("TARGET") {
+        if let Ok(v) = env::var(&format!("{}_{}", var, target)) {
+            return Some(v);
+        }
+        if let Ok(v) =
+            env::var(&format!("{}_{}", var, target.replace("-", "_")))
+        {
+            return Some(v);
+        }
+    }
+    env::var(var).ok()
 }
 
 /// A ParseCallbacks implementation that will act on file includes by echoing a rerun-if-changed
