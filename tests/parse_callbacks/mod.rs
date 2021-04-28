@@ -1,4 +1,4 @@
-use bindgen::callbacks::*;
+use crate::bindgen::callbacks::*;
 
 #[derive(Debug)]
 struct EnumVariantRename;
