@@ -12,6 +12,7 @@ pub struct A {
 }
 #[repr(C)]
 #[derive(Debug, Default, Copy, Clone, Hash, PartialEq, Eq)]
+#[bindgen_original_name("A::B")]
 pub struct A_B {
     pub member_b: ::std::os::raw::c_int,
 }
@@ -42,6 +43,7 @@ fn bindgen_test_layout_A_B() {
 }
 #[repr(C)]
 #[derive(Debug, Copy, Clone, Hash, PartialEq, Eq)]
+#[bindgen_original_name("A::D")]
 pub struct A_D<T> {
     pub foo: T,
     pub _phantom_0: ::std::marker::PhantomData<::std::cell::UnsafeCell<T>>,
@@ -76,6 +78,7 @@ fn bindgen_test_layout_A() {
 }
 #[repr(C)]
 #[derive(Debug, Default, Copy, Clone, Hash, PartialEq, Eq)]
+#[bindgen_original_name("A::C")]
 pub struct A_C {
     pub baz: ::std::os::raw::c_int,
 }
@@ -153,6 +156,7 @@ pub struct Templated<T> {
 }
 #[repr(C)]
 #[derive(Debug, Copy, Clone, Hash, PartialEq, Eq)]
+#[bindgen_original_name("Templated::Templated_inner")]
 pub struct Templated_Templated_inner<T> {
     pub member_ptr: *mut T,
     pub _phantom_0: ::std::marker::PhantomData<::std::cell::UnsafeCell<T>>,
