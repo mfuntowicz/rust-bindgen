@@ -66,11 +66,13 @@ extern "C" {
     pub fn C_method(this: *mut C, c: C_MyInt);
 }
 extern "C" {
+    #[bindgen_arg_type_reference(c)]
     #[bindgen_original_name("methodRef")]
     #[link_name = "\u{1}_ZN1C9methodRefERi"]
     pub fn C_methodRef(this: *mut C, c: *mut C_MyInt);
 }
 extern "C" {
+    #[bindgen_arg_type_reference(c)]
     #[bindgen_original_name("complexMethodRef")]
     #[link_name = "\u{1}_ZN1C16complexMethodRefERPKc"]
     pub fn C_complexMethodRef(this: *mut C, c: *mut C_Lookup);
@@ -90,10 +92,12 @@ impl C {
     pub unsafe fn method(&mut self, c: C_MyInt) {
         C_method(self, c)
     }
+    #[bindgen_arg_type_reference(c)]
     #[inline]
     pub unsafe fn methodRef(&mut self, c: *mut C_MyInt) {
         C_methodRef(self, c)
     }
+    #[bindgen_arg_type_reference(c)]
     #[inline]
     pub unsafe fn complexMethodRef(&mut self, c: *mut C_Lookup) {
         C_complexMethodRef(self, c)

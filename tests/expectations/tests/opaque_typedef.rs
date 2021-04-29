@@ -12,4 +12,5 @@ pub struct RandomTemplate {
 }
 /// <div rustbindgen opaque></div>
 pub type ShouldBeOpaque = u8;
+#[bindgen_unused_template_param]
 pub type ShouldNotBeOpaque = RandomTemplate;

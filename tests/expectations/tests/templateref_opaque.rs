@@ -16,4 +16,5 @@ pub type detail_PointerType_Type<T> = *mut T;
 pub struct UniquePtr {
     pub _address: u8,
 }
+#[bindgen_unused_template_param]
 pub type UniquePtr_Pointer = detail_PointerType;
