@@ -11,5 +11,6 @@ pub struct nsTArray {
 }
 
 extern "C" {
+    #[bindgen_unused_template_param_in_arg_or_return]
     pub fn func() -> *mut nsTArray;
 }

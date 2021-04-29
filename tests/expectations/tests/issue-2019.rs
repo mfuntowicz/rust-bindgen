@@ -62,6 +62,7 @@ fn bindgen_test_layout_B() {
     );
 }
 extern "C" {
+    #[bindgen_original_name("make")]
     #[link_name = "\u{1}_ZN1B4makeEv"]
     pub fn make1() -> B;
 }

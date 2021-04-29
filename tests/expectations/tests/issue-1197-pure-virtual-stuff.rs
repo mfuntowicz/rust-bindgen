@@ -30,3 +30,15 @@ impl Default for Foo {
         unsafe { ::std::mem::zeroed() }
     }
 }
+extern "C" {
+    #[bindgen_pure_virtual]
+    #[bindgen_original_name("Bar")]
+    #[link_name = "\u{1}_ZN3Foo3BarEv"]
+    pub fn Foo_Bar(this: *mut ::std::os::raw::c_void);
+}
+extern "C" {
+    #[bindgen_pure_virtual]
+    #[bindgen_original_name("Foo_destructor")]
+    #[link_name = "\u{1}_ZN3FooD1Ev"]
+    pub fn Foo_Foo_destructor(this: *mut Foo);
+}

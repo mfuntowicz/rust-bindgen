@@ -18,4 +18,5 @@ impl<T, V> Default for DoesNotUseU<T, V> {
         unsafe { ::std::mem::zeroed() }
     }
 }
+#[bindgen_unused_template_param]
 pub type Alias = DoesNotUseU<::std::os::raw::c_int, ::std::os::raw::c_char>;

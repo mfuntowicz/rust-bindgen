@@ -36,4 +36,5 @@ impl<F> Default for PointTyped<F> {
         unsafe { ::std::mem::zeroed() }
     }
 }
+#[bindgen_unused_template_param]
 pub type IntPoint = PointTyped<f32>;
