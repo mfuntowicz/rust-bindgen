@@ -1,6 +1,6 @@
 //! Intermediate representation for C/C++ functions and methods.
 
-use super::comp::MethodKind;
+use super::comp::{MethodKind, SpecialMemberKind};
 use super::context::{BindgenContext, TypeId};
 use super::dot::DotAttributes;
 use super::item::Item;
@@ -92,6 +92,9 @@ pub struct Function {
 
     /// The linkage of the function.
     linkage: Linkage,
+
+    /// C++ special member kind, if any.
+    special_member: Option<SpecialMemberKind>,
 }
 
 impl Function {
@@ -103,6 +106,7 @@ impl Function {
         comment: Option<String>,
         kind: FunctionKind,
         linkage: Linkage,
+        special_member: Option<SpecialMemberKind>,
     ) -> Self {
         Function {
             name,
@@ -111,6 +115,7 @@ impl Function {
             comment,
             kind,
             linkage,
+            special_member,
         }
     }
 
@@ -137,6 +142,11 @@ impl Function {
     /// Get this function's linkage.
     pub fn linkage(&self) -> Linkage {
         self.linkage
+    }
+
+    /// Get this function's C++ special member kind.
+    pub fn special_member(&self) -> Option<SpecialMemberKind> {
+        self.special_member
     }
 }
 
@@ -631,8 +641,27 @@ impl ClangSubItemParser for Function {
         let mangled_name = cursor_mangling(context, &cursor);
         let comment = cursor.raw_comment();
 
-        let function =
-            Self::new(name, mangled_name, sig, comment, kind, linkage);
+        let special_member = if cursor.is_default_constructor() {
+            Some(SpecialMemberKind::DefaultConstructor)
+        } else if cursor.is_copy_constructor() {
+            Some(SpecialMemberKind::CopyConstructor)
+        } else if cursor.is_move_constructor() {
+            Some(SpecialMemberKind::MoveConstructor)
+        } else if cursor.kind() == clang_sys::CXCursor_Destructor {
+            Some(SpecialMemberKind::Destructor)
+        } else {
+            None
+        };
+
+        let function = Self::new(
+            name,
+            mangled_name,
+            sig,
+            comment,
+            kind,
+            linkage,
+            special_member,
+        );
         Ok(ParseResult::New(function, Some(cursor)))
     }
 }
