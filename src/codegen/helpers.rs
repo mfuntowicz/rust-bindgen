@@ -6,6 +6,7 @@ use proc_macro2::{Ident, Span, TokenStream};
 use quote::TokenStreamExt;
 
 pub mod attributes {
+    use crate::ir::comp::SpecialMemberKind;
     use proc_macro2::{Ident, Span, TokenStream};
     use std::str::FromStr;
 
@@ -102,6 +103,18 @@ pub mod attributes {
     pub fn alias_discards_template_params() -> TokenStream {
         quote! {
             #[bindgen_unused_template_param]
+        }
+    }
+
+    pub fn special_member(kind: SpecialMemberKind) -> TokenStream {
+        let kind_str = match kind {
+            SpecialMemberKind::DefaultConstructor => "default_ctor",
+            SpecialMemberKind::CopyConstructor => "copy_ctor",
+            SpecialMemberKind::MoveConstructor => "move_ctor",
+            SpecialMemberKind::Destructor => "dtor",
+        };
+        quote! {
+            #[bindgen_special_member(#kind_str)]
         }
     }
 }

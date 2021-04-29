@@ -3977,6 +3977,10 @@ impl CodeGenerator for Function {
             attributes.push(attributes::original_name(self.name()));
         }
 
+        if let Some(special_member_kind) = self.special_member() {
+            attributes.push(attributes::special_member(special_member_kind));
+        }
+
         let link_name = mangled_name.unwrap_or(name);
         if !utils::names_will_be_identical_after_mangling(
             &canonical_name,
