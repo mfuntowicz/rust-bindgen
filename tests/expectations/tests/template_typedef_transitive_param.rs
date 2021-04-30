@@ -22,4 +22,5 @@ impl<T> Default for Wrapper_Wrapped<T> {
         unsafe { ::std::mem::zeroed() }
     }
 }
+#[bindgen_original_name("Wrapper::Type")]
 pub type Wrapper_Type<T> = Wrapper_Wrapped<T>;

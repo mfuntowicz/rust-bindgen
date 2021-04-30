@@ -20,6 +20,7 @@ pub mod root {
             unsafe { ::std::mem::zeroed() }
         }
     }
+    #[bindgen_original_name("AutoValueVector::Alias")]
     pub type AutoValueVector_Alias = ::std::os::raw::c_int;
     #[test]
     fn __bindgen_test_layout_Rooted_open0_int_close0_instantiation() {
