@@ -914,8 +914,16 @@ impl CodeGenerator for Type {
                     return;
                 }
 
+                let mut attributes = Vec::new();
+                if let Some(original_name) = item.original_name(ctx) {
+                    if name != original_name {
+                        attributes.push(attributes::original_name(&original_name));
+                    }
+                }
+
                 tokens.append_all(match alias_style {
                     AliasVariation::TypeAlias => quote! {
+                        #( #attributes )*
                         pub type #rust_name
                     },
                     AliasVariation::NewType | AliasVariation::NewTypeDeref => {
@@ -925,8 +933,7 @@ impl CodeGenerator for Type {
                             alias_style
                         );
 
-                        let mut attributes =
-                            vec![attributes::repr("transparent")];
+                        attributes.push(attributes::repr("transparent"));
                         let derivable_traits = derives_of_item(item, ctx);
                         if !derivable_traits.is_empty() {
                             let derives: Vec<_> = derivable_traits.into();
@@ -2008,9 +2015,10 @@ impl CodeGenerator for CompInfo {
             attributes.push(attributes::derives(&derives))
         }
 
-        let original_name = item.original_name(ctx);
-        if canonical_name != original_name {
-            attributes.push(attributes::original_name(&original_name));
+        if let Some(original_name) = item.original_name(ctx) {
+            if canonical_name != original_name {
+                attributes.push(attributes::original_name(&original_name));
+            }
         }
 
         let mut tokens = if is_union && struct_layout.is_rust_union() {
@@ -2938,6 +2946,12 @@ impl CodeGenerator for Enum {
         };
 
         let mut attrs = vec![];
+
+        if let Some(original_name) = item.original_name(ctx) {
+            if name != original_name {
+                attrs.push(attributes::original_name(&original_name));
+            }
+        }
 
         // TODO(emilio): Delegate this to the builders?
         match variation {
