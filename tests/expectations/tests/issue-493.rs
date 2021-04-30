@@ -58,6 +58,7 @@ pub type basic_string_value_type = ::std::os::raw::c_char;
 pub type basic_string_pointer = *mut basic_string_value_type;
 #[repr(C)]
 #[derive(Debug, Copy, Clone, Hash, PartialEq, Eq)]
+#[bindgen_original_name("basic_string::__long")]
 pub struct basic_string___long {
     pub __cap_: basic_string_size_type,
     pub __size_: basic_string_size_type,
@@ -76,6 +77,7 @@ pub enum basic_string__bindgen_ty_1 {
     __min_cap = 0,
 }
 #[repr(C)]
+#[bindgen_original_name("basic_string::__short")]
 pub struct basic_string___short {
     pub __bindgen_anon_1: basic_string___short__bindgen_ty_1,
     pub __data_: *mut basic_string_value_type,
@@ -97,6 +99,7 @@ impl Default for basic_string___short {
 }
 #[repr(C)]
 #[repr(align(1))]
+#[bindgen_original_name("basic_string::__ulx")]
 pub struct basic_string___ulx {
     pub __lx: __BindgenUnionField<basic_string___long>,
     pub __lxx: __BindgenUnionField<basic_string___short>,
@@ -116,6 +119,7 @@ pub enum basic_string__bindgen_ty_2 {
 }
 #[repr(C)]
 #[derive(Debug, Copy, Clone, Hash, PartialEq, Eq)]
+#[bindgen_original_name("basic_string::__raw")]
 pub struct basic_string___raw {
     pub __words: *mut basic_string_size_type,
 }
@@ -125,6 +129,7 @@ impl Default for basic_string___raw {
     }
 }
 #[repr(C)]
+#[bindgen_original_name("basic_string::__rep")]
 pub struct basic_string___rep {
     pub __bindgen_anon_1: basic_string___rep__bindgen_ty_1,
 }
