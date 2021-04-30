@@ -19,21 +19,18 @@ pub struct bar1 {
 }
 #[repr(C)]
 #[derive(Debug, Default, Copy, Clone)]
-#[bindgen_original_name("foo::bar1::_bindgen_ty_1")]
 pub struct bar1__bindgen_ty_1 {
     pub x2: ::std::os::raw::c_int,
     pub b3: bar1__bindgen_ty_1__bindgen_ty_1,
 }
 #[repr(C)]
 #[derive(Debug, Default, Copy, Clone)]
-#[bindgen_original_name("foo::bar1::_bindgen_ty_1::_bindgen_ty_1")]
 pub struct bar1__bindgen_ty_1__bindgen_ty_1 {
     pub x3: ::std::os::raw::c_int,
     pub b4: bar4,
 }
 #[repr(C)]
 #[derive(Debug, Default, Copy, Clone)]
-#[bindgen_original_name("foo::bar1::_bindgen_ty_1::_bindgen_ty_1::bar4")]
 pub struct bar4 {
     pub x4: ::std::os::raw::c_int,
 }
@@ -184,13 +181,11 @@ pub struct _bindgen_ty_1 {
 }
 #[repr(C)]
 #[derive(Debug, Default, Copy, Clone)]
-#[bindgen_original_name("_bindgen_ty_1::_bindgen_ty_1")]
 pub struct _bindgen_ty_1__bindgen_ty_1 {
     pub b: baz,
 }
 #[repr(C)]
 #[derive(Debug, Default, Copy, Clone)]
-#[bindgen_original_name("_bindgen_ty_1::_bindgen_ty_1::baz")]
 pub struct baz {
     pub x: ::std::os::raw::c_int,
 }

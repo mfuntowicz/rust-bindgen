@@ -2008,9 +2008,10 @@ impl CodeGenerator for CompInfo {
             attributes.push(attributes::derives(&derives))
         }
 
-        let original_name = item.original_name(ctx);
-        if canonical_name != original_name {
-            attributes.push(attributes::original_name(&original_name));
+        if let Some(original_name) = item.original_name(ctx) {
+            if canonical_name != original_name {
+                attributes.push(attributes::original_name(&original_name));
+            }
         }
 
         let mut tokens = if is_union && struct_layout.is_rust_union() {
