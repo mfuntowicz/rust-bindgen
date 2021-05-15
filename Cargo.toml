@@ -60,6 +60,7 @@ rustc-hash = "1.0.1"
 # New validation in 0.3.6 breaks bindgen-integration:
 # https://github.com/alexcrichton/proc-macro2/commit/489c642.
 proc-macro2 = { version = "1", default-features = false }
+itertools = "0.10.0"
 
 [dependencies.env_logger]
 optional = true

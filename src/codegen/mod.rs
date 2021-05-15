@@ -402,8 +402,8 @@ impl AppendImplicitTemplateParams for proc_macro2::TokenStream {
             _ => {}
         }
 
-        let params: Vec<_> = item
-            .used_template_params(ctx)
+        let (used_template_params, _) = item.used_template_params(ctx);
+        let params: Vec<_> = used_template_params
             .iter()
             .map(|p| {
                 p.try_to_rust_ty(ctx, &())
@@ -827,7 +827,8 @@ impl CodeGenerator for Type {
                     return;
                 }
 
-                let mut outer_params = item.used_template_params(ctx);
+                let (mut outer_params, has_unused_template_args) =
+                    item.used_template_params(ctx);
 
                 let is_opaque = item.is_opaque(ctx, &());
                 let (inner_rust_type, inner_annotations) = if is_opaque {
@@ -876,8 +877,17 @@ impl CodeGenerator for Type {
                     quote! {}
                 };
                 tokens.append_all(match inner_annotations {
-                    RustTyAnnotation::None | RustTyAnnotation::Reference => quote! {},
-                    RustTyAnnotation::HasUnusedTemplateArgs => attributes::alias_discards_template_params(),
+                    RustTyAnnotation::None | RustTyAnnotation::Reference
+                        if has_unused_template_args =>
+                    {
+                        attributes::discards_template_param()
+                    }
+                    RustTyAnnotation::None | RustTyAnnotation::Reference => {
+                        quote! {}
+                    }
+                    RustTyAnnotation::HasUnusedTemplateArgs => {
+                        attributes::discards_template_param()
+                    }
                 });
 
                 let alias_style = if ctx.options().type_alias.matches(&name) {
@@ -1922,7 +1932,9 @@ impl CodeGenerator for CompInfo {
 
         let mut generic_param_names = vec![];
 
-        for (idx, ty) in item.used_template_params(ctx).iter().enumerate() {
+        let (used_template_params, unused_template_params) =
+            item.used_template_params(ctx);
+        for (idx, ty) in used_template_params.iter().enumerate() {
             let param = ctx.resolve_type(*ty);
             let name = param.name().unwrap();
             let ident = ctx.rust_ident(name);
@@ -1965,6 +1977,9 @@ impl CodeGenerator for CompInfo {
             attributes.push(attributes::repr_list(&["C", &packed_repr]));
         } else {
             attributes.push(attributes::repr("C"));
+        }
+        if unused_template_params {
+            attributes.push(attributes::discards_template_param());
         }
 
         if ctx.options().rust_features().repr_align {
@@ -3689,8 +3704,8 @@ impl TryToRustTy for Type {
                     let void = c_void(ctx);
                     return Ok(void.to_ptr(/* is_const = */ false).into());
                 }
-                let template_params = item
-                    .used_template_params(ctx)
+                let (used_template_params, _) = item.used_template_params(ctx);
+                let template_params = used_template_params
                     .into_iter()
                     .filter(|param| param.is_template_param(ctx, &()))
                     .collect::<Vec<_>>();

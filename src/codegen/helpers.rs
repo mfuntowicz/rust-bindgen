@@ -100,7 +100,7 @@ pub mod attributes {
         }
     }
 
-    pub fn alias_discards_template_params() -> TokenStream {
+    pub fn discards_template_param() -> TokenStream {
         quote! {
             #[bindgen_unused_template_param]
         }
