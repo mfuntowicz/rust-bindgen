@@ -97,6 +97,9 @@ pub struct Function {
 
     /// C++ special member kind, if any.
     special_member: Option<SpecialMemberKind>,
+
+    /// C++ visibility
+    is_private: bool,
 }
 
 impl Function {
@@ -109,6 +112,7 @@ impl Function {
         kind: FunctionKind,
         linkage: Linkage,
         special_member: Option<SpecialMemberKind>,
+        is_private: bool,
     ) -> Self {
         Function {
             name,
@@ -118,6 +122,7 @@ impl Function {
             kind,
             linkage,
             special_member,
+            is_private,
         }
     }
 
@@ -149,6 +154,11 @@ impl Function {
     /// Get this function's C++ special member kind.
     pub fn special_member(&self) -> Option<SpecialMemberKind> {
         self.special_member
+    }
+
+    /// Whether it is private
+    pub fn is_private(&self) -> bool {
+        self.is_private
     }
 }
 
@@ -603,9 +613,7 @@ impl ClangSubItemParser for Function {
             return Err(ParseError::Continue);
         }
 
-        if cursor.access_specifier() == CX_CXXPrivate {
-            return Err(ParseError::Continue);
-        }
+        let is_private = cursor.access_specifier() == CX_CXXPrivate;
 
         if cursor.is_inlined_function() {
             if !context.options().generate_inline_functions {
@@ -666,6 +674,7 @@ impl ClangSubItemParser for Function {
             kind,
             linkage,
             special_member,
+            is_private,
         );
         Ok(ParseResult::New(function, Some(cursor)))
     }
