@@ -6,7 +6,7 @@
 )]
 
 #[repr(C)]
-#[derive(Debug, Copy, Clone)]
+#[derive(Copy, Clone)]
 pub struct foo {
     pub member: foo__bindgen_ty_1,
 }
