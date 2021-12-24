@@ -10,7 +10,7 @@ use crate::clang;
 use crate::parse::{
     ClangItemParser, ClangSubItemParser, ParseError, ParseResult,
 };
-use clang_sys::{self, CXCallingConv};
+use clang_sys::{self, CXCallingConv, CX_CXXAccessSpecifier, CX_CXXPrivate, CX_CXXProtected};
 use proc_macro2;
 use quote;
 use quote::TokenStreamExt;
@@ -77,6 +77,18 @@ pub enum Visibility {
     Public,
     Protected,
     Private,
+}
+
+impl From<CX_CXXAccessSpecifier> for Visibility {
+    fn from(access_specifier: CX_CXXAccessSpecifier) -> Self {
+        if access_specifier == CX_CXXPrivate {
+            Visibility::Private
+        } else if access_specifier == CX_CXXProtected {
+            Visibility::Protected
+        } else {
+            Visibility::Public
+        }
+    }
 }
 
 /// A function declaration, with a signature, arguments, and argument names.
@@ -621,13 +633,7 @@ impl ClangSubItemParser for Function {
             return Err(ParseError::Continue);
         }
 
-        let visibility = if cursor.access_specifier() == CX_CXXPrivate {
-            Visibility::Private
-        } else if cursor.access_specifier() == CX_CXXProtected {
-            Visibility::Protected
-        } else {
-            Visibility::Public
-        };
+        let visibility = Visibility::from(cursor.access_specifier());
 
         if cursor.is_inlined_function() {
             if !context.options().generate_inline_functions {

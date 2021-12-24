@@ -1994,6 +1994,7 @@ impl CodeGenerator for CompInfo {
         if unused_template_params {
             attributes.push(attributes::discards_template_param());
         }
+        attributes.push(attributes::visibility(self.visibility()));
 
         if ctx.options().rust_features().repr_align {
             if let Some(explicit) = explicit_align {
