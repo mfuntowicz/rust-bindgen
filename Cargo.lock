@@ -33,7 +33,7 @@ dependencies = [
 
 [[package]]
 name = "autocxx-bindgen"
-version = "0.59.4"
+version = "0.59.5"
 dependencies = [
  "bitflags",
  "cexpr",
