@@ -103,4 +103,14 @@ pub trait ParseCallbacks: fmt::Debug + UnwindSafe {
     fn add_derives(&self, _name: &str) -> Vec<String> {
         vec![]
     }
+
+    /// Whether to generate a type as opaque.
+    ///
+    /// This gives finer control relative to specifying a glob in the options.
+    /// Return `None` if you wish to respect the options; or `Some(true)` or
+    /// `Some(false)` if you want to override the options for this particular
+    /// type.
+    fn make_opaque(&self, _name: &str) -> Option<bool> {
+        None
+    }
 }
