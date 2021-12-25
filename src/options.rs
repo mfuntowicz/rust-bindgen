@@ -165,6 +165,14 @@ where
                 .takes_value(true)
                 .multiple(true)
                 .number_of_values(1),
+            Arg::with_name("blocklist-file")
+                .alias("blacklist-file")
+                .long("blocklist-file")
+                .help("Mark all contents of <path> as hidden.")
+                .value_name("path")
+                .takes_value(true)
+                .multiple(true)
+                .number_of_values(1),
             Arg::with_name("no-layout-tests")
                 .long("no-layout-tests")
                 .help("Avoid generating layout tests for any type."),
@@ -631,6 +639,12 @@ where
         }
     }
 
+    if let Some(hidden_files) = matches.values_of("blocklist-file") {
+        for file in hidden_files {
+            builder = builder.blocklist_file(file);
+        }
+    }
+
     if matches.is_present("builtins") {
         builder = builder.emit_builtins();
     }
@@ -718,7 +732,7 @@ where
 
     if let Some(what_to_generate) = matches.value_of("generate") {
         let mut config = CodegenConfig::empty();
-        for what in what_to_generate.split(",") {
+        for what in what_to_generate.split(',') {
             match what {
                 "functions" => config.insert(CodegenConfig::FUNCTIONS),
                 "types" => config.insert(CodegenConfig::TYPES),

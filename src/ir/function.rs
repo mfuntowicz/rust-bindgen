@@ -153,12 +153,17 @@ impl Function {
 
     /// Get this function's name.
     pub fn mangled_name(&self) -> Option<&str> {
-        self.mangled_name.as_ref().map(|n| &**n)
+        self.mangled_name.as_deref()
     }
 
     /// Get this function's signature type.
     pub fn signature(&self) -> TypeId {
         self.signature
+    }
+
+    /// Get this function's comment.
+    pub fn comment(&self) -> Option<&str> {
+        self.comment.as_deref()
     }
 
     /// Get this function's kind.
@@ -227,10 +232,7 @@ pub enum Abi {
 impl Abi {
     /// Returns whether this Abi is known or not.
     fn is_unknown(&self) -> bool {
-        match *self {
-            Abi::Unknown(..) => true,
-            _ => false,
-        }
+        matches!(*self, Abi::Unknown(..))
     }
 }
 
@@ -380,7 +382,7 @@ fn args_from_ty_and_cursor(
             });
 
             let cursor = arg_cur.unwrap_or(*cursor);
-            let ty = arg_ty.unwrap_or(cursor.cur_type());
+            let ty = arg_ty.unwrap_or_else(|| cursor.cur_type());
             (name, Item::from_ty_or_ref(ty, cursor, None, ctx))
         })
         .collect()
@@ -400,7 +402,7 @@ impl FunctionSig {
             argument_types,
             is_variadic,
             must_use,
-            abi: abi,
+            abi,
         }
     }
 
@@ -451,7 +453,7 @@ impl FunctionSig {
             CXCursor_CXXMethod |
             CXCursor_ObjCInstanceMethodDecl |
             CXCursor_ObjCClassMethodDecl => {
-                args_from_ty_and_cursor(&ty, &cursor, ctx)
+                args_from_ty_and_cursor(ty, &cursor, ctx)
             }
             _ => {
                 // For non-CXCursor_FunctionDecl, visiting the cursor's children
@@ -474,7 +476,7 @@ impl FunctionSig {
                     // right AST for functions tagged as stdcall and such...
                     //
                     // https://bugs.llvm.org/show_bug.cgi?id=45919
-                    args_from_ty_and_cursor(&ty, &cursor, ctx)
+                    args_from_ty_and_cursor(ty, &cursor, ctx)
                 } else {
                     args
                 }
@@ -562,7 +564,7 @@ impl FunctionSig {
             warn!("Unknown calling convention: {:?}", call_conv);
         }
 
-        Ok(Self::new(ret.into(), args, ty.is_variadic(), must_use, abi))
+        Ok(Self::new(ret, args, ty.is_variadic(), must_use, abi))
     }
 
     /// Get this function signature's return type.
@@ -607,10 +609,7 @@ impl FunctionSig {
             return false;
         }
 
-        match self.abi {
-            Abi::C | Abi::Unknown(..) => true,
-            _ => false,
-        }
+        matches!(self.abi, Abi::C | Abi::Unknown(..))
     }
 }
 

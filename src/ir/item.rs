@@ -417,6 +417,8 @@ pub struct Item {
     parent_id: ItemId,
     /// The item kind.
     kind: ItemKind,
+    /// The source location of the item.
+    location: Option<clang::SourceLocation>,
 }
 
 impl AsRef<ItemId> for Item {
@@ -433,18 +435,20 @@ impl Item {
         annotations: Option<Annotations>,
         parent_id: ItemId,
         kind: ItemKind,
+        location: Option<clang::SourceLocation>,
     ) -> Self {
         debug_assert!(id != parent_id || kind.is_module());
         Item {
-            id: id,
+            id,
             local_id: LazyCell::new(),
             next_child_local_id: Cell::new(1),
             canonical_name: LazyCell::new(),
             path_for_allowlisting: LazyCell::new(),
-            parent_id: parent_id,
-            comment: comment,
+            parent_id,
+            comment,
             annotations: annotations.unwrap_or_default(),
-            kind: kind,
+            kind,
+            location,
         }
     }
 
@@ -454,10 +458,15 @@ impl Item {
         ty: &clang::Type,
         ctx: &mut BindgenContext,
     ) -> TypeId {
+        let location = ty.declaration().location();
         let ty = Opaque::from_clang_ty(ty, ctx);
         let kind = ItemKind::Type(ty);
         let parent = ctx.root_module().into();
-        ctx.add_item(Item::new(with_id, None, None, parent, kind), None, None);
+        ctx.add_item(
+            Item::new(with_id, None, None, parent, kind, Some(location)),
+            None,
+            None,
+        );
         with_id.as_type_id_unchecked()
     }
 
@@ -612,10 +621,7 @@ impl Item {
 
     /// Is this item a module?
     pub fn is_module(&self) -> bool {
-        match self.kind {
-            ItemKind::Module(..) => true,
-            _ => false,
-        }
+        matches!(self.kind, ItemKind::Module(..))
     }
 
     /// Get this item's annotations.
@@ -635,13 +641,24 @@ impl Item {
             return true;
         }
 
+        if !ctx.options().blocklisted_files.is_empty() {
+            if let Some(location) = &self.location {
+                let (file, _, _, _) = location.location();
+                if let Some(filename) = file.name() {
+                    if ctx.options().blocklisted_files.matches(&filename) {
+                        return true;
+                    }
+                }
+            }
+        }
+
         let path = self.path_for_allowlisting(ctx);
         let name = path[1..].join("::");
         ctx.options().blocklisted_items.matches(&name) ||
             match self.kind {
                 ItemKind::Type(..) => {
                     ctx.options().blocklisted_types.matches(&name) ||
-                        ctx.is_replaced_type(&path, self.id)
+                        ctx.is_replaced_type(path, self.id)
                 }
                 ItemKind::Function(..) => {
                     ctx.options().blocklisted_functions.matches(&name)
@@ -658,10 +675,7 @@ impl Item {
 
     /// Is this item a var type?
     pub fn is_var(&self) -> bool {
-        match *self.kind() {
-            ItemKind::Var(..) => true,
-            _ => false,
-        }
+        matches!(*self.kind(), ItemKind::Var(..))
     }
 
     /// Take out item NameOptions
@@ -722,7 +736,7 @@ impl Item {
                         .through_type_refs()
                         .resolve(ctx)
                         .push_disambiguated_name(ctx, to, level + 1);
-                    to.push_str("_");
+                    to.push('_');
                 }
                 to.push_str(&format!("close{}", level));
             }
@@ -867,7 +881,7 @@ impl Item {
             if ctx.options().enable_cxx_namespaces {
                 return path.last().unwrap().clone();
             }
-            return path.join("_").to_owned();
+            return path.join("_");
         }
 
         let base_name = target.base_name(ctx);
@@ -905,7 +919,7 @@ impl Item {
 
             // If target is anonymous we need find its first named ancestor.
             if target.is_anon() {
-                while let Some(id) = ids_iter.next() {
+                for id in ids_iter.by_ref() {
                     ids.push(id);
 
                     if !ctx.resolve_item(id).is_anon() {
@@ -1136,7 +1150,7 @@ impl IsOpaque for Item {
         );
         self.annotations.opaque() ||
             self.as_type().map_or(false, |ty| ty.is_opaque(ctx, self)) ||
-            ctx.opaque_by_name(&self.path_for_allowlisting(ctx))
+            ctx.opaque_by_name(self.path_for_allowlisting(ctx))
     }
 }
 
@@ -1146,20 +1160,16 @@ where
 {
     fn has_vtable(&self, ctx: &BindgenContext) -> bool {
         let id: ItemId = (*self).into();
-        id.as_type_id(ctx)
-            .map_or(false, |id| match ctx.lookup_has_vtable(id) {
-                HasVtableResult::No => false,
-                _ => true,
-            })
+        id.as_type_id(ctx).map_or(false, |id| {
+            !matches!(ctx.lookup_has_vtable(id), HasVtableResult::No)
+        })
     }
 
     fn has_vtable_ptr(&self, ctx: &BindgenContext) -> bool {
         let id: ItemId = (*self).into();
-        id.as_type_id(ctx)
-            .map_or(false, |id| match ctx.lookup_has_vtable(id) {
-                HasVtableResult::SelfHasVtable => true,
-                _ => false,
-            })
+        id.as_type_id(ctx).map_or(false, |id| {
+            matches!(ctx.lookup_has_vtable(id), HasVtableResult::SelfHasVtable)
+        })
     }
 }
 
@@ -1339,7 +1349,7 @@ impl ClangItemParser for Item {
         let id = ctx.next_item_id();
         let module = ctx.root_module().into();
         ctx.add_item(
-            Item::new(id, None, None, module, ItemKind::Type(ty)),
+            Item::new(id, None, None, module, ItemKind::Type(ty), None),
             None,
             None,
         );
@@ -1377,6 +1387,7 @@ impl ClangItemParser for Item {
                                 annotations,
                                 relevant_parent_id,
                                 ItemKind::$what(item),
+                                Some(cursor.location()),
                             ),
                             declaration,
                             Some(cursor),
@@ -1424,7 +1435,7 @@ impl ClangItemParser for Item {
                     }
                     ctx.known_semantic_parent(definition)
                         .or(parent_id)
-                        .unwrap_or(ctx.current_module().into())
+                        .unwrap_or_else(|| ctx.current_module().into())
                 }
                 None => relevant_parent_id,
             };
@@ -1556,8 +1567,9 @@ impl ClangItemParser for Item {
                 potential_id,
                 None,
                 None,
-                parent_id.unwrap_or(current_module.into()),
+                parent_id.unwrap_or_else(|| current_module.into()),
                 ItemKind::Type(Type::new(None, None, kind, is_const)),
+                Some(location.location()),
             ),
             None,
             None,
@@ -1635,7 +1647,7 @@ impl ClangItemParser for Item {
             Annotations::new(&decl).or_else(|| Annotations::new(&location));
 
         if let Some(ref annotations) = annotations {
-            if let Some(ref replaced) = annotations.use_instead_of() {
+            if let Some(replaced) = annotations.use_instead_of() {
                 ctx.replace(replaced, id);
             }
         }
@@ -1689,6 +1701,7 @@ impl ClangItemParser for Item {
                         annotations,
                         relevant_parent_id,
                         ItemKind::Type(item),
+                        Some(location.location()),
                     ),
                     declaration,
                     Some(location),
@@ -1883,11 +1896,7 @@ impl ClangItemParser for Item {
                 clang_sys::CXChildVisit_Continue
             });
 
-            if let Some(def) = definition {
-                def
-            } else {
-                return None;
-            }
+            definition?
         };
         assert!(is_template_with_spelling(&definition, &ty_spelling));
 
@@ -1921,6 +1930,7 @@ impl ClangItemParser for Item {
             None,
             parent,
             ItemKind::Type(Type::named(name)),
+            Some(location.location()),
         );
         ctx.add_type_param(item, definition);
         Some(id.as_type_id_unchecked())
@@ -1971,7 +1981,7 @@ impl ItemCanonicalPath for Item {
             path.push(CONSTIFIED_ENUM_MODULE_REPR_NAME.into());
         }
 
-        return path;
+        path
     }
 
     fn canonical_path(&self, ctx: &BindgenContext) -> Vec<String> {
@@ -2004,8 +2014,8 @@ impl<'a> NameOptions<'a> {
     /// Construct a new `NameOptions`
     pub fn new(item: &'a Item, ctx: &'a BindgenContext) -> Self {
         NameOptions {
-            item: item,
-            ctx: ctx,
+            item,
+            ctx,
             within_namespaces: false,
             user_mangled: UserMangled::Yes,
         }
