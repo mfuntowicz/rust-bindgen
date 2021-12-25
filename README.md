@@ -1,5 +1,14 @@
-[![crates.io](https://img.shields.io/crates/v/bindgen.svg)](https://crates.io/crates/bindgen)
-[![docs.rs](https://docs.rs/bindgen/badge.svg)](https://docs.rs/bindgen/)
+[![crates.io](https://img.shields.io/crates/v/autocxx-bindgen.svg)](https://crates.io/crates/autocxx-bindgen)
+[![docs.rs](https://docs.rs/autocxx-bindgen/badge.svg)](https://docs.rs/autocxx-bindgen/)
+
+# `autocxx-bindgen`
+
+This is a slightly forked version of `bindgen` which generates code appropriate for ingestion
+by `autocxx`. It's hoped that all changes here can eventually be upstreamed to `bindgen`,
+but at present `autocxx` is sufficiently experimental that I do not yet want to impose its
+strange requirements on `bindgen` - hence the fork.
+
+The rest of this `README` is from the original bindgen.
 
 # `bindgen`
 

@@ -7,6 +7,7 @@
 
 #[repr(C)]
 #[derive(Debug, Default)]
+#[bindgen_original_name("String")]
 pub struct cv_String {
     pub _address: u8,
 }
@@ -24,6 +25,8 @@ fn bindgen_test_layout_cv_String() {
     );
 }
 extern "C" {
+    #[bindgen_original_name("String_destructor")]
+    #[bindgen_special_member("dtor")]
     #[link_name = "\u{1}_ZN2cv6StringD1Ev"]
     pub fn cv_String_String_destructor(this: *mut cv_String);
 }

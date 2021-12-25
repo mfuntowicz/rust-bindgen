@@ -29,6 +29,8 @@ fn bindgen_test_layout_Foo() {
     );
 }
 extern "C" {
+    #[bindgen_original_name("Foo_destructor")]
+    #[bindgen_special_member("dtor")]
     #[link_name = "\u{1}_ZN3FooD1Ev"]
     pub fn Foo_Foo_destructor(this: *mut Foo);
 }

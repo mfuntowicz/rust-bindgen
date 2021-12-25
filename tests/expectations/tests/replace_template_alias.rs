@@ -8,9 +8,11 @@
 /// But the replacement type does use T!
 ///
 /// <div rustbindgen replaces="JS::detail::MaybeWrapped" />
+#[bindgen_original_name("MaybeWrapped")]
 pub type JS_detail_MaybeWrapped<T> = T;
 #[repr(C)]
 #[derive(Debug, Copy, Clone)]
+#[bindgen_original_name("Rooted")]
 pub struct JS_Rooted<T> {
     pub ptr: JS_detail_MaybeWrapped<T>,
     pub _phantom_0: ::std::marker::PhantomData<::std::cell::UnsafeCell<T>>,

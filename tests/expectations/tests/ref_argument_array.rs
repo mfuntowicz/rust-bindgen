@@ -36,6 +36,8 @@ impl Default for nsID {
     }
 }
 extern "C" {
+    #[bindgen_arg_type_reference(aDest)]
+    #[bindgen_original_name("ToProvidedString")]
     #[link_name = "\u{1}_ZN4nsID16ToProvidedStringERA10_c"]
     pub fn nsID_ToProvidedString(
         this: *mut ::std::os::raw::c_void,

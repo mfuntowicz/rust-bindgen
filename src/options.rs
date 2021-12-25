@@ -1,3 +1,4 @@
+use autocxx_bindgen as bindgen;
 use bindgen::{
     builder, AliasVariation, Builder, CodegenConfig, EnumVariation,
     MacroTypeVariation, RustTarget, DEFAULT_ANON_FIELDS_PREFIX,

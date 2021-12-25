@@ -1,6 +1,6 @@
 //! Intermediate representation for C/C++ functions and methods.
 
-use super::comp::MethodKind;
+use super::comp::{MethodKind, SpecialMemberKind};
 use super::context::{BindgenContext, TypeId};
 use super::dot::DotAttributes;
 use super::item::Item;
@@ -10,7 +10,7 @@ use crate::clang;
 use crate::parse::{
     ClangItemParser, ClangSubItemParser, ParseError, ParseResult,
 };
-use clang_sys::{self, CXCallingConv};
+use clang_sys::{self, CXCallingConv, CX_CXXAccessSpecifier, CX_CXXPrivate, CX_CXXProtected};
 use proc_macro2;
 use quote;
 use quote::TokenStreamExt;
@@ -71,6 +71,26 @@ pub enum Linkage {
     Internal,
 }
 
+/// Visibility
+#[derive(Debug, Clone, Copy)]
+pub enum Visibility {
+    Public,
+    Protected,
+    Private,
+}
+
+impl From<CX_CXXAccessSpecifier> for Visibility {
+    fn from(access_specifier: CX_CXXAccessSpecifier) -> Self {
+        if access_specifier == CX_CXXPrivate {
+            Visibility::Private
+        } else if access_specifier == CX_CXXProtected {
+            Visibility::Protected
+        } else {
+            Visibility::Public
+        }
+    }
+}
+
 /// A function declaration, with a signature, arguments, and argument names.
 ///
 /// The argument names vector must be the same length as the ones in the
@@ -94,6 +114,12 @@ pub struct Function {
 
     /// The linkage of the function.
     linkage: Linkage,
+
+    /// C++ special member kind, if any.
+    special_member: Option<SpecialMemberKind>,
+
+    /// C++ visibility
+    visibility: Visibility,
 }
 
 impl Function {
@@ -105,6 +131,8 @@ impl Function {
         comment: Option<String>,
         kind: FunctionKind,
         linkage: Linkage,
+        special_member: Option<SpecialMemberKind>,
+        visibility: Visibility,
     ) -> Self {
         Function {
             name,
@@ -113,6 +141,8 @@ impl Function {
             comment,
             kind,
             linkage,
+            special_member,
+            visibility,
         }
     }
 
@@ -144,6 +174,16 @@ impl Function {
     /// Get this function's linkage.
     pub fn linkage(&self) -> Linkage {
         self.linkage
+    }
+
+    /// Get this function's C++ special member kind.
+    pub fn special_member(&self) -> Option<SpecialMemberKind> {
+        self.special_member
+    }
+
+    /// Whether it is private
+    pub fn visibility(&self) -> Visibility {
+        self.visibility
     }
 }
 
@@ -483,7 +523,7 @@ impl FunctionSig {
                     Item::builtin_type(TypeKind::Pointer(class), false, ctx);
                 args.insert(0, (Some("this".into()), ptr));
             } else if is_virtual {
-                let void = Item::builtin_type(TypeKind::Void, false, ctx);
+                let void = Item::builtin_type(TypeKind::Void, is_const, ctx);
                 let ptr =
                     Item::builtin_type(TypeKind::Pointer(void), false, ctx);
                 args.insert(0, (Some("this".into()), ptr));
@@ -592,9 +632,7 @@ impl ClangSubItemParser for Function {
             return Err(ParseError::Continue);
         }
 
-        if cursor.access_specifier() == CX_CXXPrivate {
-            return Err(ParseError::Continue);
-        }
+        let visibility = Visibility::from(cursor.access_specifier());
 
         if cursor.is_inlined_function() {
             if !context.options().generate_inline_functions {
@@ -635,8 +673,28 @@ impl ClangSubItemParser for Function {
         let mangled_name = cursor_mangling(context, &cursor);
         let comment = cursor.raw_comment();
 
-        let function =
-            Self::new(name, mangled_name, sig, comment, kind, linkage);
+        let special_member = if cursor.is_default_constructor() {
+            Some(SpecialMemberKind::DefaultConstructor)
+        } else if cursor.is_copy_constructor() {
+            Some(SpecialMemberKind::CopyConstructor)
+        } else if cursor.is_move_constructor() {
+            Some(SpecialMemberKind::MoveConstructor)
+        } else if cursor.kind() == clang_sys::CXCursor_Destructor {
+            Some(SpecialMemberKind::Destructor)
+        } else {
+            None
+        };
+
+        let function = Self::new(
+            name,
+            mangled_name,
+            sig,
+            comment,
+            kind,
+            linkage,
+            special_member,
+            visibility,
+        );
         Ok(ParseResult::New(function, Some(cursor)))
     }
 }

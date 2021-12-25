@@ -40,4 +40,5 @@ impl<F> Default for PointTyped<F> {
         }
     }
 }
+#[bindgen_unused_template_param]
 pub type IntPoint = PointTyped<f32>;

@@ -1,4 +1,4 @@
-extern crate bindgen;
+use autocxx_bindgen as bindgen;
 #[cfg(feature = "logging")]
 extern crate env_logger;
 #[macro_use]
@@ -85,6 +85,7 @@ fn print_verbose_err() {
 
 #[cfg(test)]
 mod test {
+    use autocxx_bindgen as bindgen;
     fn build_flags_output_helper(builder: &bindgen::Builder) {
         let mut command_line_flags = builder.command_line_flags();
         command_line_flags.insert(0, "bindgen".to_string());

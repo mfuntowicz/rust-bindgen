@@ -12,6 +12,7 @@ pub struct foo {
 }
 #[repr(C)]
 #[derive(Debug, Default, Copy, Clone)]
+#[bindgen_original_name("foo::bar1")]
 pub struct bar1 {
     pub x1: ::std::os::raw::c_int,
     pub b2: bar1__bindgen_ty_1,
