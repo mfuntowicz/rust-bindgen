@@ -1,5 +1,8 @@
 //! Generate Rust bindings for C and C++ libraries.
 //!
+//! This is a slightly forked version for use by `autocxx` - do not use
+//! this otherwise. See the regular `bindgen` crate instead.
+//!
 //! Provide a C/C++ header file, receive Rust FFI code to call into C/C++
 //! functions and use types defined in the header.
 //!
