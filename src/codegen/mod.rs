@@ -2000,6 +2000,9 @@ impl CodeGenerator for CompInfo {
             attributes.push(attributes::discards_template_param());
         }
         attributes.push(attributes::visibility(self.visibility()));
+        if let Some(layout) = layout {
+            attributes.push(attributes::layout(&layout));
+        }
 
         if ctx.options().rust_features().repr_align {
             if let Some(explicit) = explicit_align {
