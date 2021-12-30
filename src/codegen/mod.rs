@@ -623,7 +623,10 @@ impl CodeGenerator for Var {
             attrs.push(attributes::doc(comment));
         }
 
-        let ty = self.ty().to_rust_ty_or_opaque(ctx, &()).ignore_annotations();
+        let ty = self
+            .ty()
+            .to_rust_ty_or_opaque(ctx, &())
+            .ignore_annotations();
 
         if let Some(val) = self.val() {
             match *val {
@@ -849,7 +852,9 @@ impl CodeGenerator for Type {
                     let (mut inner_ty, inner_annotations) = inner_item
                         .try_to_rust_ty_or_opaque(ctx, &())
                         .map(|ty| ty.to_outer_type())
-                        .unwrap_or_else(|_| (self.to_opaque(ctx, item), RustTyAnnotation::None));
+                        .unwrap_or_else(|_| {
+                            (self.to_opaque(ctx, item), RustTyAnnotation::None)
+                        });
                     inner_ty.append_implicit_template_params(ctx, inner_item);
                     (inner_ty, inner_annotations)
                 };
@@ -932,7 +937,8 @@ impl CodeGenerator for Type {
                 let mut attributes = Vec::new();
                 if let Some(original_name) = item.original_name(ctx) {
                     if name != original_name {
-                        attributes.push(attributes::original_name(&original_name));
+                        attributes
+                            .push(attributes::original_name(&original_name));
                     }
                 }
 
@@ -1101,7 +1107,8 @@ impl<'a> TryToRustTy for Vtable<'a> {
         let name = ctx.rust_ident(self.canonical_name(ctx));
         Ok(quote! {
             #name
-        }.into())
+        }
+        .into())
     }
 }
 
@@ -1151,7 +1158,8 @@ impl CodeGenerator for TemplateInstantiation {
             let fn_name = ctx.rust_ident_raw(fn_name);
 
             let prefix = ctx.trait_prefix();
-            let ident = item.to_rust_ty_or_opaque(ctx, &()).ignore_annotations();
+            let ident =
+                item.to_rust_ty_or_opaque(ctx, &()).ignore_annotations();
             let size_of_expr = quote! {
                 ::#prefix::mem::size_of::<#ident>()
             };
@@ -1275,7 +1283,10 @@ impl<'a> FieldCodegen<'a> for FieldData {
         let field_item =
             self.ty().into_resolver().through_type_refs().resolve(ctx);
         let field_ty = field_item.expect_type();
-        let mut ty = self.ty().to_rust_ty_or_opaque(ctx, &()).ignore_annotations();
+        let mut ty = self
+            .ty()
+            .to_rust_ty_or_opaque(ctx, &())
+            .ignore_annotations();
         ty.append_implicit_template_params(ctx, field_item);
 
         // NB: If supported, we use proper `union` types.
@@ -1293,7 +1304,8 @@ impl<'a> FieldCodegen<'a> for FieldData {
         } else if let Some(item) = field_ty.is_incomplete_array(ctx) {
             result.saw_incomplete_array();
 
-            let inner = item.to_rust_ty_or_opaque(ctx, &()).ignore_annotations();
+            let inner =
+                item.to_rust_ty_or_opaque(ctx, &()).ignore_annotations();
 
             if ctx.options().enable_cxx_namespaces {
                 quote! {
@@ -1574,8 +1586,9 @@ impl<'a> FieldCodegen<'a> for BitfieldUnit {
             let param_name = bitfield_getter_name(ctx, bf);
             let bitfield_ty_item = ctx.resolve_item(bf.ty());
             let bitfield_ty = bitfield_ty_item.expect_type();
-            let bitfield_ty =
-                bitfield_ty.to_rust_ty_or_opaque(ctx, bitfield_ty_item).ignore_annotations();
+            let bitfield_ty = bitfield_ty
+                .to_rust_ty_or_opaque(ctx, bitfield_ty_item)
+                .ignore_annotations();
 
             ctor_params.push(quote! {
                 #param_name : #bitfield_ty
@@ -1665,8 +1678,9 @@ impl<'a> FieldCodegen<'a> for Bitfield {
                 }
             };
 
-        let bitfield_ty =
-            bitfield_ty.to_rust_ty_or_opaque(ctx, bitfield_ty_item).ignore_annotations();
+        let bitfield_ty = bitfield_ty
+            .to_rust_ty_or_opaque(ctx, bitfield_ty_item)
+            .ignore_annotations();
 
         let offset = self.offset_into_unit();
         let width = self.width() as u8;
@@ -1795,7 +1809,9 @@ impl CodeGenerator for CompInfo {
                 }
 
                 let inner_item = ctx.resolve_item(base.ty);
-                let mut inner = inner_item.to_rust_ty_or_opaque(ctx, &()).ignore_annotations();
+                let mut inner = inner_item
+                    .to_rust_ty_or_opaque(ctx, &())
+                    .ignore_annotations();
                 inner.append_implicit_template_params(ctx, &inner_item);
                 let field_name = ctx.rust_ident(&base.field_name);
 
@@ -2436,7 +2452,8 @@ impl MethodCodegen for Method {
             write!(&mut function_name, "{}", times_seen).unwrap();
         }
         let function_name = ctx.rust_ident(function_name);
-        let (mut args, args_attributes) = utils::fnsig_arguments(ctx, signature);
+        let (mut args, args_attributes) =
+            utils::fnsig_arguments(ctx, signature);
         let (mut ret, ret_attr) = utils::fnsig_return_ty(ctx, signature);
 
         if !self.is_static() && !self.is_constructor() {
@@ -3127,7 +3144,8 @@ impl CodeGenerator for Enum {
 
         // A map where we keep a value -> variant relation.
         let mut seen_values = HashMap::<_, Ident>::default();
-        let enum_rust_ty = item.to_rust_ty_or_opaque(ctx, &()).ignore_annotations();
+        let enum_rust_ty =
+            item.to_rust_ty_or_opaque(ctx, &()).ignore_annotations();
         let is_toplevel = item.is_toplevel(ctx);
 
         // Used to mangle the constants we generate in the unnamed-enum case.
@@ -3501,11 +3519,7 @@ where
 {
     type Extra = E;
 
-    fn to_rust_ty_or_opaque(
-        &self,
-        ctx: &BindgenContext,
-        extra: &E,
-    ) -> RustTy {
+    fn to_rust_ty_or_opaque(&self, ctx: &BindgenContext, extra: &E) -> RustTy {
         self.try_to_rust_ty(ctx, extra)
             .unwrap_or_else(|_| self.to_opaque(ctx, extra).into())
     }
@@ -3602,38 +3616,42 @@ impl RustTy {
         }
     }
 
-    fn new_reference(ts: proc_macro2::TokenStream, inner: RustTyAnnotation) -> Self {
+    fn new_reference(
+        ts: proc_macro2::TokenStream,
+        inner: RustTyAnnotation,
+    ) -> Self {
         let annotation = match inner {
-            RustTyAnnotation::HasUnusedTemplateArgs => RustTyAnnotation::HasUnusedTemplateArgs,
-            _ => RustTyAnnotation::Reference
+            RustTyAnnotation::HasUnusedTemplateArgs => {
+                RustTyAnnotation::HasUnusedTemplateArgs
+            }
+            _ => RustTyAnnotation::Reference,
         };
-        Self {
-            ts,
-            annotation,
-        }
+        Self { ts, annotation }
     }
 
     // We're constructing some outer type composed of an inner type,
     // e.g. a reference to a T - the inner type is T
     fn wraps(ts: proc_macro2::TokenStream, inner: RustTyAnnotation) -> Self {
         let annotation = match inner {
-            RustTyAnnotation::HasUnusedTemplateArgs => RustTyAnnotation::HasUnusedTemplateArgs,
-            _ => RustTyAnnotation::None
+            RustTyAnnotation::HasUnusedTemplateArgs => {
+                RustTyAnnotation::HasUnusedTemplateArgs
+            }
+            _ => RustTyAnnotation::None,
         };
-        Self {
-            ts,
-            annotation,
-        }
+        Self { ts, annotation }
     }
 
-    fn with_unused_template_args(ts: proc_macro2::TokenStream, has_unused_args: bool) -> Self {
+    fn with_unused_template_args(
+        ts: proc_macro2::TokenStream,
+        has_unused_args: bool,
+    ) -> Self {
         Self {
             ts,
             annotation: if has_unused_args {
                 RustTyAnnotation::HasUnusedTemplateArgs
             } else {
                 RustTyAnnotation::None
-            }
+            },
         }
     }
 
@@ -3686,7 +3704,9 @@ impl TryToRustTy for Type {
                     IntKind::Long => Ok(raw_type(ctx, "c_long").into()),
                     IntKind::ULong => Ok(raw_type(ctx, "c_ulong").into()),
                     IntKind::LongLong => Ok(raw_type(ctx, "c_longlong").into()),
-                    IntKind::ULongLong => Ok(raw_type(ctx, "c_ulonglong").into()),
+                    IntKind::ULongLong => {
+                        Ok(raw_type(ctx, "c_ulonglong").into())
+                    }
                     IntKind::WChar => {
                         let layout = self
                             .layout(ctx)
@@ -3706,7 +3726,9 @@ impl TryToRustTy for Type {
                     IntKind::I64 => Ok(quote! { i64 }.into()),
                     IntKind::U64 => Ok(quote! { u64 }.into()),
                     IntKind::Custom { name, .. } => {
-                        Ok(proc_macro2::TokenStream::from_str(name).unwrap().into())
+                        Ok(proc_macro2::TokenStream::from_str(name)
+                            .unwrap()
+                            .into())
                     }
                     IntKind::U128 => {
                         Ok(if ctx.options().rust_features.i128_and_u128 {
@@ -3715,14 +3737,16 @@ impl TryToRustTy for Type {
                             // Best effort thing, but wrong alignment
                             // unfortunately.
                             quote! { [u64; 2] }
-                        }.into())
+                        }
+                        .into())
                     }
                     IntKind::I128 => {
                         Ok(if ctx.options().rust_features.i128_and_u128 {
                             quote! { i128 }
                         } else {
                             quote! { [u64; 2] }
-                        }.into())
+                        }
+                        .into())
                     }
                 }
             }
@@ -3742,7 +3766,8 @@ impl TryToRustTy for Type {
                     quote! {
                         __BindgenComplex<#float_path>
                     }
-                }.into())
+                }
+                .into())
             }
             TypeKind::Function(ref fs) => {
                 // We can't rely on the sizeof(Option<NonZero<_>>) ==
@@ -3754,13 +3779,15 @@ impl TryToRustTy for Type {
                 let prefix = ctx.trait_prefix();
                 Ok(quote! {
                     ::#prefix::option::Option<#ty>
-                }.into())
+                }
+                .into())
             }
             TypeKind::Array(item, len) | TypeKind::Vector(item, len) => {
                 let ty = item.try_to_rust_ty(ctx, &())?.to_unannotated_ts()?;
                 Ok(quote! {
                     [ #ty ; #len ]
-                }.into())
+                }
+                .into())
             }
             TypeKind::Enum(..) => {
                 let path = item.namespace_aware_canonical_path(ctx);
@@ -3780,10 +3807,10 @@ impl TryToRustTy for Type {
                     return Ok(void.to_ptr(/* is_const = */ false).into());
                 }
 
-								let (used_template_params, _) = item.used_template_params(ctx);
+                let (used_template_params, _) = item.used_template_params(ctx);
                 let has_used_template_params = used_template_params
-                      .into_iter()
-                      .any(|param| param.is_template_param(ctx, &()));
+                    .into_iter()
+                    .any(|param| param.is_template_param(ctx, &()));
                 if item.is_opaque(ctx, &()) && has_used_template_params {
                     self.try_to_opaque(ctx, item)
                 } else if let Some(ty) = self
@@ -3808,7 +3835,8 @@ impl TryToRustTy for Type {
             TypeKind::Opaque => self.try_to_opaque(ctx, item),
             TypeKind::Pointer(inner) | TypeKind::Reference(inner) => {
                 let is_const = ctx.resolve_type(inner).is_const();
-                let is_reference = matches!(self.kind(), TypeKind::Reference(_));
+                let is_reference =
+                    matches!(self.kind(), TypeKind::Reference(_));
 
                 let inner =
                     inner.into_resolver().through_type_refs().resolve(ctx);
@@ -3820,7 +3848,8 @@ impl TryToRustTy for Type {
                 // Regardless if we can properly represent the inner type, we
                 // should always generate a proper pointer here, so use
                 // infallible conversion of the inner type.
-                let (mut ty, inner_annotations) = inner.to_rust_ty_or_opaque(ctx, &()).to_outer_type();
+                let (mut ty, inner_annotations) =
+                    inner.to_rust_ty_or_opaque(ctx, &()).to_outer_type();
                 ty.append_implicit_template_params(ctx, inner);
 
                 // Avoid the first function pointer level, since it's already
@@ -3842,19 +3871,23 @@ impl TryToRustTy for Type {
                 let ident = ctx.rust_ident(&name);
                 Ok(quote! {
                     #ident
-                }.into())
+                }
+                .into())
             }
             TypeKind::ObjCSel => Ok(quote! {
                 objc::runtime::Sel
-            }.into()),
+            }
+            .into()),
             TypeKind::ObjCId => Ok(quote! {
                 id
-            }.into()),
+            }
+            .into()),
             TypeKind::ObjCInterface(ref interface) => {
                 let name = ctx.rust_ident(interface.name());
                 Ok(quote! {
                     #name
-                }.into())
+                }
+                .into())
             }
             ref u @ TypeKind::UnresolvedTypeRef(..) => {
                 unreachable!("Should have been resolved after parsing {:?}!", u)
@@ -3928,24 +3961,32 @@ impl TryToRustTy for TemplateInstantiation {
             .filter(|&(_, param)| ctx.uses_template_parameter(def.id(), *param))
             .map(|(arg, _)| {
                 let arg = arg.into_resolver().through_type_refs().resolve(ctx);
-                let mut ty = arg.try_to_rust_ty(ctx, &())?.to_unannotated_ts()?;
+                let mut ty =
+                    arg.try_to_rust_ty(ctx, &())?.to_unannotated_ts()?;
                 ty.append_implicit_template_params(ctx, arg);
                 Ok(ty)
             })
             .collect::<error::Result<Vec<_>>>()?;
 
-        let has_unused_template_args = def_params.iter()
+        let has_unused_template_args = def_params
+            .iter()
             // Only pass type arguments for the type parameters that
             // the def uses.
             .any(|param| !ctx.uses_template_parameter(def.id(), *param));
 
         if template_args.is_empty() {
-            return Ok(RustTy::with_unused_template_args(ty, has_unused_template_args));
+            return Ok(RustTy::with_unused_template_args(
+                ty,
+                has_unused_template_args,
+            ));
         }
 
-        Ok(RustTy::with_unused_template_args(quote! {
-            #ty < #( #template_args ),* >
-        }, has_unused_template_args))
+        Ok(RustTy::with_unused_template_args(
+            quote! {
+                #ty < #( #template_args ),* >
+            },
+            has_unused_template_args,
+        ))
     }
 }
 
@@ -3969,7 +4010,8 @@ impl TryToRustTy for FunctionSig {
             }
             _ => Ok(quote! {
                 unsafe extern #abi fn ( #( #arguments ),* ) #ret
-            }.into()),
+            }
+            .into()),
         }
     }
 }
@@ -4001,8 +4043,11 @@ impl CodeGenerator for Function {
         // something meaningful for them.
         let is_pure_virtual = match self.kind() {
             FunctionKind::Method(ref method_kind)
-                if method_kind.is_pure_virtual() => true,
-            _ => false
+                if method_kind.is_pure_virtual() =>
+            {
+                true
+            }
+            _ => false,
         };
 
         // Similar to static member variables in a class template, we can't
@@ -4124,7 +4169,9 @@ impl CodeGenerator for Function {
             let return_item = ctx.resolve_item(signature.return_type());
             let ret_ty = match *return_item.kind().expect_type().kind() {
                 TypeKind::Void => quote! {()},
-                _ => return_item.to_rust_ty_or_opaque(ctx, &()).ignore_annotations(),
+                _ => return_item
+                    .to_rust_ty_or_opaque(ctx, &())
+                    .ignore_annotations(),
             };
             result.dynamic_items().push(
                 ident,
@@ -4453,7 +4500,9 @@ pub(crate) fn codegen(
 }
 
 pub mod utils {
-    use super::{RustTy, RustTyAnnotation, ToRustTyOrOpaque, error, helpers::attributes};
+    use super::{
+        error, helpers::attributes, RustTy, RustTyAnnotation, ToRustTyOrOpaque,
+    };
     use crate::ir::context::BindgenContext;
     use crate::ir::function::{Abi, FunctionSig};
     use crate::ir::item::{Item, ItemCanonicalPath};
@@ -4775,7 +4824,7 @@ pub mod utils {
     ) -> (proc_macro2::TokenStream, proc_macro2::TokenStream) {
         let return_item = ctx.resolve_item(sig.return_type());
         if let TypeKind::Void = *return_item.kind().expect_type().kind() {
-            (quote! {}, quote!{})
+            (quote! {}, quote! {})
         } else {
             let ret_ty = return_item.to_rust_ty_or_opaque(ctx, &());
             let annotations = ret_ty.annotation;
@@ -4783,11 +4832,18 @@ pub mod utils {
             let ts = quote! {
                 -> #ret_ty
             };
-            (ts, match annotations {
-                super::RustTyAnnotation::None => quote! {},
-                super::RustTyAnnotation::Reference => attributes::ret_type_reference(),
-                super::RustTyAnnotation::HasUnusedTemplateArgs => attributes::unused_template_param_in_arg_or_return(),
-            })
+            (
+                ts,
+                match annotations {
+                    super::RustTyAnnotation::None => quote! {},
+                    super::RustTyAnnotation::Reference => {
+                        attributes::ret_type_reference()
+                    }
+                    super::RustTyAnnotation::HasUnusedTemplateArgs => {
+                        attributes::unused_template_param_in_arg_or_return()
+                    }
+                },
+            )
         }
     }
 
@@ -4822,7 +4878,10 @@ pub mod utils {
                                 t.to_rust_ty_or_opaque(ctx, &())
                             };
                         let (inner_ty, annotations) = rust_ty.to_outer_type();
-                        RustTy::wraps(inner_ty.to_ptr(ctx.resolve_type(t).is_const()), annotations)
+                        RustTy::wraps(
+                            inner_ty.to_ptr(ctx.resolve_type(t).is_const()),
+                            annotations,
+                        )
                     }
                     TypeKind::Pointer(inner) => {
                         let inner = ctx.resolve_item(inner);
@@ -4854,19 +4913,26 @@ pub mod utils {
                 let arg_name = ctx.rust_ident(arg_name);
                 let arg_attr = match arg_details.annotation {
                     RustTyAnnotation::None => quote! {},
-                    RustTyAnnotation::Reference => attributes::arg_type_reference(&arg_name),
-                    RustTyAnnotation::HasUnusedTemplateArgs => attributes::unused_template_param_in_arg_or_return(),
+                    RustTyAnnotation::Reference => {
+                        attributes::arg_type_reference(&arg_name)
+                    }
+                    RustTyAnnotation::HasUnusedTemplateArgs => {
+                        attributes::unused_template_param_in_arg_or_return()
+                    }
                 };
 
-                (quote! {
-                    #arg_name : #arg_ty
-                }, arg_attr)
+                (
+                    quote! {
+                        #arg_name : #arg_ty
+                    },
+                    arg_attr,
+                )
             })
             .unzip();
 
         if sig.is_variadic() {
             args.0.push(quote! { ... });
-            args.1.push(quote! { });
+            args.1.push(quote! {});
         }
 
         args
@@ -4916,7 +4982,9 @@ pub mod utils {
             if let TypeKind::Void = *return_item.kind().expect_type().kind() {
                 quote! { () }
             } else {
-                return_item.to_rust_ty_or_opaque(ctx, &()).ignore_annotations()
+                return_item
+                    .to_rust_ty_or_opaque(ctx, &())
+                    .ignore_annotations()
             };
 
         quote! {

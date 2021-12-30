@@ -10,7 +10,9 @@ use crate::clang;
 use crate::parse::{
     ClangItemParser, ClangSubItemParser, ParseError, ParseResult,
 };
-use clang_sys::{self, CXCallingConv, CX_CXXAccessSpecifier, CX_CXXPrivate, CX_CXXProtected};
+use clang_sys::{
+    self, CXCallingConv, CX_CXXAccessSpecifier, CX_CXXPrivate, CX_CXXProtected,
+};
 use proc_macro2;
 use quote;
 use quote::TokenStreamExt;

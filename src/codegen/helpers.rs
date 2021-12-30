@@ -6,7 +6,10 @@ use proc_macro2::{Ident, Span, TokenStream};
 use quote::TokenStreamExt;
 
 pub mod attributes {
-    use crate::{ir::{comp::SpecialMemberKind, function::Visibility, layout::Layout}, codegen::helpers::ast_ty};
+    use crate::{
+        codegen::helpers::ast_ty,
+        ir::{comp::SpecialMemberKind, function::Visibility, layout::Layout},
+    };
     use proc_macro2::{Ident, Span, TokenStream};
     use std::str::FromStr;
 
@@ -96,8 +99,7 @@ pub mod attributes {
 
     pub fn visibility(visibility: Visibility) -> TokenStream {
         match visibility {
-            Visibility::Public => quote! {
-            },
+            Visibility::Public => quote! {},
             Visibility::Protected => quote! {
                 #[bindgen_visibility_protected]
             },
