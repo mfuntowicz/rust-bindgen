@@ -2081,12 +2081,7 @@ If you encounter an error missing from this list, please file an issue or a PR!"
             self.in_codegen_phase(),
             "You're not supposed to call this yet"
         );
-        let name = path[1..].join("::");
-        self.options
-            .parse_callbacks
-            .as_ref()
-            .and_then(|cb| cb.make_opaque(&name))
-            .unwrap_or_else(|| self.options.opaque_types.matches(&name))
+        self.options.opaque_types.matches(&path[1..].join("::"))
     }
 
     /// Get the options used to configure this bindgen context.
