@@ -4049,6 +4049,7 @@ impl CodeGenerator for Function {
             }
             _ => false,
         };
+        let is_virtual = matches!(self.kind(), FunctionKind::Method(MethodKind::Virtual { .. }));
 
         // Similar to static member variables in a class template, we can't
         // generate bindings to template functions, because the set of
@@ -4098,6 +4099,10 @@ impl CodeGenerator for Function {
 
         if is_pure_virtual {
             attributes.push(attributes::is_pure_virtual());
+        }
+
+        if is_virtual {
+            attributes.push(attributes::is_virtual());
         }
 
         attributes.push(attributes::visibility(self.visibility()));

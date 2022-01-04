@@ -91,6 +91,12 @@ pub mod attributes {
         }
     }
 
+    pub fn is_virtual() -> TokenStream {
+        quote! {
+            #[bindgen_virtual]
+        }
+    }
+
     pub fn is_pure_virtual() -> TokenStream {
         quote! {
             #[bindgen_pure_virtual]
