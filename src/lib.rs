@@ -571,6 +571,11 @@ impl Builder {
             output_vector.push("--explicit-padding".into());
         }
 
+        if self.options.use_specific_virtual_function_receiver {
+            output_vector
+                .push("--use-specific-virtual-function-receiver".into());
+        }
+
         // Add clang arguments
 
         output_vector.push("--".into());
@@ -1446,6 +1451,19 @@ impl Builder {
         self
     }
 
+    /// If true, use specific virtual function receiver.
+    ///
+    /// Normally virtual functions have void* as their 'this' type.
+    /// This change overrides that behavior to indicate a pointer of the
+    /// specific type.
+    pub fn use_specific_virtual_function_receiver(
+        mut self,
+        doit: bool,
+    ) -> Self {
+        self.options.use_specific_virtual_function_receiver = doit;
+        self
+    }
+
     /// Generate the Rust bindings using the options built up thus far.
     pub fn generate(mut self) -> Result<Bindings, ()> {
         // Add any extra arguments from the environment to the clang command line.
@@ -1974,6 +1992,11 @@ struct BindgenOptions {
 
     /// Always output explicit padding fields
     force_explicit_padding: bool,
+
+    /// Normally, virtual functions have 'void*' as their receiver type because
+    /// of the complexities around pointer offsets. This overrides that
+    /// behavior to indicate the specific type.
+    use_specific_virtual_function_receiver: bool,
 }
 
 /// TODO(emilio): This is sort of a lie (see the error message that results from
@@ -2119,6 +2142,7 @@ impl Default for BindgenOptions {
             translate_enum_integer_types: false,
             c_naming: false,
             force_explicit_padding: false,
+            use_specific_virtual_function_receiver: false,
         }
     }
 }
