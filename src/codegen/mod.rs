@@ -895,7 +895,9 @@ impl CodeGenerator for Type {
                     {
                         attributes::discards_template_param()
                     }
-                    RustTyAnnotation::None | RustTyAnnotation::Reference => {
+                    RustTyAnnotation::None |
+                    RustTyAnnotation::Reference |
+                    RustTyAnnotation::RValueReference => {
                         quote! {}
                     }
                     RustTyAnnotation::HasUnusedTemplateArgs => {
@@ -3594,6 +3596,7 @@ impl TryToOpaque for Type {
 enum RustTyAnnotation {
     None,
     Reference,
+    RValueReference,
     HasUnusedTemplateArgs,
 }
 
@@ -3625,6 +3628,19 @@ impl RustTy {
                 RustTyAnnotation::HasUnusedTemplateArgs
             }
             _ => RustTyAnnotation::Reference,
+        };
+        Self { ts, annotation }
+    }
+
+    fn new_rvalue_reference(
+        ts: proc_macro2::TokenStream,
+        inner: RustTyAnnotation,
+    ) -> Self {
+        let annotation = match inner {
+            RustTyAnnotation::HasUnusedTemplateArgs => {
+                RustTyAnnotation::HasUnusedTemplateArgs
+            }
+            _ => RustTyAnnotation::RValueReference,
         };
         Self { ts, annotation }
     }
@@ -3833,10 +3849,12 @@ impl TryToRustTy for Type {
                 Ok(utils::build_path(item, ctx)?.into())
             }
             TypeKind::Opaque => self.try_to_opaque(ctx, item),
-            TypeKind::Pointer(inner) | TypeKind::Reference(inner) => {
+            TypeKind::Pointer(inner) | TypeKind::Reference(inner, _) => {
                 let is_const = ctx.resolve_type(inner).is_const();
                 let is_reference =
-                    matches!(self.kind(), TypeKind::Reference(_));
+                    matches!(self.kind(), TypeKind::Reference(_, false));
+                let is_rvalue_reference =
+                    matches!(self.kind(), TypeKind::Reference(_, true));
 
                 let inner =
                     inner.into_resolver().through_type_refs().resolve(ctx);
@@ -3859,7 +3877,9 @@ impl TryToRustTy for Type {
                     Ok(RustTy::wraps(ty, inner_annotations))
                 } else {
                     let ty_ptr = ty.to_ptr(is_const);
-                    Ok(if is_reference {
+                    Ok(if is_rvalue_reference {
+                        RustTy::new_rvalue_reference(ty_ptr, inner_annotations)
+                    } else if is_reference {
                         RustTy::new_reference(ty_ptr, inner_annotations)
                     } else {
                         RustTy::wraps(ty_ptr, inner_annotations)
@@ -4844,6 +4864,9 @@ pub mod utils {
                     super::RustTyAnnotation::Reference => {
                         attributes::ret_type_reference()
                     }
+                    super::RustTyAnnotation::RValueReference => {
+                        attributes::ret_type_rvalue_reference()
+                    }
                     super::RustTyAnnotation::HasUnusedTemplateArgs => {
                         attributes::unused_template_param_in_arg_or_return()
                     }
@@ -4920,6 +4943,9 @@ pub mod utils {
                     RustTyAnnotation::None => quote! {},
                     RustTyAnnotation::Reference => {
                         attributes::arg_type_reference(&arg_name)
+                    }
+                    RustTyAnnotation::RValueReference => {
+                        attributes::arg_type_rvalue_reference(&arg_name)
                     }
                     RustTyAnnotation::HasUnusedTemplateArgs => {
                         attributes::unused_template_param_in_arg_or_return()

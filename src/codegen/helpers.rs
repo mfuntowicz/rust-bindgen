@@ -85,6 +85,12 @@ pub mod attributes {
         }
     }
 
+    pub fn ret_type_rvalue_reference() -> TokenStream {
+        quote! {
+            #[bindgen_ret_type_rvalue_reference]
+        }
+    }
+
     pub fn arg_type_reference(arg_name: &Ident) -> TokenStream {
         quote! {
             #[bindgen_arg_type_reference(#arg_name)]
@@ -94,6 +100,12 @@ pub mod attributes {
     pub fn is_virtual() -> TokenStream {
         quote! {
             #[bindgen_virtual]
+        }
+    }
+
+    pub fn arg_type_rvalue_reference(arg_name: &Ident) -> TokenStream {
+        quote! {
+            #[bindgen_arg_type_rvalue_reference(#arg_name)]
         }
     }
 
