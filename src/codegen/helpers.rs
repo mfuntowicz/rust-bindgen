@@ -1,15 +1,13 @@
 //! Helpers for code generation that don't need macro expansion.
 
-use crate::ir::context::BindgenContext;
+use crate::ir::comp::SpecialMemberKind;
+use crate::ir::function::Visibility;
+use crate::{ir::context::BindgenContext, BindgenOptions};
 use crate::ir::layout::Layout;
 use proc_macro2::{Ident, Span, TokenStream};
 use quote::TokenStreamExt;
 
 pub mod attributes {
-    use crate::{
-        codegen::helpers::ast_ty,
-        ir::{comp::SpecialMemberKind, function::Visibility, layout::Layout},
-    };
     use proc_macro2::{Ident, Span, TokenStream};
     use std::str::FromStr;
 
@@ -72,74 +70,93 @@ pub mod attributes {
             #[link_name = #name]
         }
     }
+}
 
-    pub fn original_name(name: &str) -> TokenStream {
-        quote! {
-            #[bindgen_original_name(#name)]
+
+pub trait CppSemanticAttributeCreator {
+    fn do_add(&mut self, ts: TokenStream);
+    fn is_enabled(&self) -> bool;
+
+    fn add(&mut self, tokens: TokenStream) {
+        if self.is_enabled() {
+            self.do_add(
+                quote! {
+                    #[cpp_semantics(#tokens)]
+                }
+            )
         }
     }
 
-    pub fn ret_type_reference() -> TokenStream {
-        quote! {
-            #[bindgen_ret_type_reference]
+    fn add_ident(&mut self, desc: &str) {
+        if self.is_enabled() {
+            let id = Ident::new(desc, Span::call_site());
+            self.add(quote! { #id })
         }
     }
 
-    pub fn ret_type_rvalue_reference() -> TokenStream {
-        quote! {
-            #[bindgen_ret_type_rvalue_reference]
-        }
+    fn special_member(&mut self, kind: SpecialMemberKind) {
+        let kind_str = match kind {
+            SpecialMemberKind::DefaultConstructor => "default_ctor",
+            SpecialMemberKind::CopyConstructor => "copy_ctor",
+            SpecialMemberKind::MoveConstructor => "move_ctor",
+            SpecialMemberKind::Destructor => "dtor",
+        };
+        self.add(quote! {
+            special_member(#kind_str)
+        })
     }
 
-    pub fn arg_type_reference(arg_name: &Ident) -> TokenStream {
-        quote! {
-            #[bindgen_arg_type_reference(#arg_name)]
-        }
+    fn original_name(&mut self, name: &str) {
+        self.add(quote! {
+            original_name(#name)
+        })
     }
 
-    pub fn is_virtual() -> TokenStream {
-        quote! {
-            #[bindgen_virtual]
-        }
+    fn ret_type_reference(&mut self) {
+        self.add_ident("ret_type_reference")
     }
 
-    pub fn arg_type_rvalue_reference(arg_name: &Ident) -> TokenStream {
-        quote! {
-            #[bindgen_arg_type_rvalue_reference(#arg_name)]
-        }
+    fn ret_type_rvalue_reference(&mut self) {
+        self.add_ident("ret_type_rvalue_reference")
     }
 
-    pub fn is_pure_virtual() -> TokenStream {
-        quote! {
-            #[bindgen_pure_virtual]
-        }
+    fn arg_type_reference(&mut self, arg_name: &Ident) {
+        self.add(quote! {
+            arg_type_reference(#arg_name)
+        })
     }
 
-    pub fn visibility(visibility: Visibility) -> TokenStream {
+    fn is_virtual(&mut self, ) {
+        self.add_ident("bindgen_virtual")
+    }
+
+    fn arg_type_rvalue_reference(&mut self, arg_name: &Ident) {
+        self.add(quote! {
+            arg_type_rvalue_reference(#arg_name)
+        })
+    }
+
+    fn is_pure_virtual(&mut self, ) {
+        self.add_ident("pure_virtual")
+    }
+
+    fn visibility(&mut self, visibility: Visibility) {
         match visibility {
-            Visibility::Public => quote! {},
-            Visibility::Protected => quote! {
-                #[bindgen_visibility_protected]
-            },
-            Visibility::Private => quote! {
-                #[bindgen_visibility_private]
-            },
+            Visibility::Protected => self.add_ident("visibility_protected"),
+            Visibility::Private => self.add_ident("visibility_private"),
+            _ => {}
         }
     }
 
-    pub fn unused_template_param_in_arg_or_return() -> TokenStream {
-        quote! {
-            #[bindgen_unused_template_param_in_arg_or_return]
-        }
+    fn unused_template_param_in_arg_or_return(&mut self) {
+        self.add_ident("unused_template_param_in_arg_or_return")
     }
 
-    pub fn discards_template_param() -> TokenStream {
-        quote! {
-            #[bindgen_unused_template_param]
-        }
+    fn discards_template_param(&mut self) {
+        self.add_ident("unused_template_param")
     }
 
-    pub fn layout(layout: &Layout) -> TokenStream {
+    fn layout(&mut self, layout: &Layout) {
         let sz = ast_ty::int_expr(layout.size as i64);
         let align = ast_ty::int_expr(layout.align as i64);
         let packed = if layout.packed {
@@ -147,21 +164,60 @@ pub mod attributes {
         } else {
             quote! { false }
         };
-        quote! {
-            #[bindgen_layout(#sz, #align, #packed)]
+        self.add(quote! {
+            layout(#sz, #align, #packed)
+        })
+    }
+}
+
+pub struct CppSemanticAttributeAdder<'a> {
+    enabled: bool,
+    attrs: &'a mut Vec<TokenStream>
+}
+
+impl<'a> CppSemanticAttributeAdder<'a> {
+    pub(crate) fn new(opts: &BindgenOptions, attrs: &'a mut Vec<TokenStream>) -> Self {
+        Self {
+            enabled: opts.cpp_semantic_attributes, attrs
+        }
+    }
+}
+
+impl<'a> CppSemanticAttributeCreator for CppSemanticAttributeAdder<'a> {
+    fn do_add(&mut self, ts: TokenStream) {
+        self.attrs.push(ts)
+    }
+
+    fn is_enabled(&self) -> bool {
+        self.enabled
+    }
+}
+
+
+pub struct CppSemanticAttributeSingle {
+    enabled: bool,
+    attr: TokenStream
+}
+
+impl CppSemanticAttributeSingle {
+    pub(crate) fn new(opts: &BindgenOptions) -> Self {
+        Self {
+            enabled: opts.cpp_semantic_attributes, attr: quote! {}
         }
     }
 
-    pub fn special_member(kind: SpecialMemberKind) -> TokenStream {
-        let kind_str = match kind {
-            SpecialMemberKind::DefaultConstructor => "default_ctor",
-            SpecialMemberKind::CopyConstructor => "copy_ctor",
-            SpecialMemberKind::MoveConstructor => "move_ctor",
-            SpecialMemberKind::Destructor => "dtor",
-        };
-        quote! {
-            #[bindgen_special_member(#kind_str)]
-        }
+    pub(crate) fn result(self) -> TokenStream {
+        self.attr
+    }
+}
+
+impl CppSemanticAttributeCreator for CppSemanticAttributeSingle {
+    fn do_add(&mut self, ts: TokenStream) {
+        self.attr = ts;
+    }
+
+    fn is_enabled(&self) -> bool {
+        self.enabled
     }
 }
 

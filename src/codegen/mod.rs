@@ -17,6 +17,7 @@ use self::struct_layout::StructLayoutTracker;
 
 use super::BindgenOptions;
 
+use crate::codegen::helpers::{CppSemanticAttributeAdder, CppSemanticAttributeCreator, CppSemanticAttributeSingle};
 use crate::ir::analysis::{HasVtable, Sizedness};
 use crate::ir::annotations::FieldAccessorKind;
 use crate::ir::comment;
@@ -889,21 +890,21 @@ impl CodeGenerator for Type {
                 } else {
                     quote! {}
                 };
-                tokens.append_all(match inner_annotations {
+                let mut semantic_annotations = CppSemanticAttributeSingle::new(ctx.options());
+                match inner_annotations {
                     RustTyAnnotation::None | RustTyAnnotation::Reference
                         if has_unused_template_args =>
                     {
-                        attributes::discards_template_param()
+                        semantic_annotations.discards_template_param();
                     }
                     RustTyAnnotation::None |
                     RustTyAnnotation::Reference |
-                    RustTyAnnotation::RValueReference => {
-                        quote! {}
-                    }
+                    RustTyAnnotation::RValueReference => {}
                     RustTyAnnotation::HasUnusedTemplateArgs => {
-                        attributes::discards_template_param()
+                        semantic_annotations.discards_template_param();
                     }
-                });
+                };
+                tokens.append_all(semantic_annotations.result());
 
                 let alias_style = if ctx.options().type_alias.matches(&name) {
                     AliasVariation::TypeAlias
@@ -939,8 +940,8 @@ impl CodeGenerator for Type {
                 let mut attributes = Vec::new();
                 if let Some(original_name) = item.original_name(ctx) {
                     if name != original_name {
-                        attributes
-                            .push(attributes::original_name(&original_name));
+                        let mut semantic_annotations = CppSemanticAttributeAdder::new(ctx.options(), &mut attributes);
+                        semantic_annotations.original_name(&original_name);
                     }
                 }
 
@@ -2014,12 +2015,13 @@ impl CodeGenerator for CompInfo {
         } else {
             attributes.push(attributes::repr("C"));
         }
+        let mut semantic_annotations = CppSemanticAttributeAdder::new(ctx.options(), &mut attributes);
         if unused_template_params {
-            attributes.push(attributes::discards_template_param());
+            semantic_annotations.discards_template_param();
         }
-        attributes.push(attributes::visibility(self.visibility()));
+        semantic_annotations.visibility(self.visibility());
         if let Some(layout) = layout {
-            attributes.push(attributes::layout(&layout));
+            semantic_annotations.layout(&layout);
         }
 
         if ctx.options().rust_features().repr_align {
@@ -2081,7 +2083,8 @@ impl CodeGenerator for CompInfo {
 
         if let Some(original_name) = item.original_name(ctx) {
             if canonical_name != original_name {
-                attributes.push(attributes::original_name(&original_name));
+                let mut semantic_annotations = CppSemanticAttributeAdder::new(ctx.options(), &mut attributes);
+                semantic_annotations.original_name(&original_name);
             }
         }
 
@@ -3033,7 +3036,8 @@ impl CodeGenerator for Enum {
 
         if let Some(original_name) = item.original_name(ctx) {
             if name != original_name {
-                attrs.push(attributes::original_name(&original_name));
+                let mut semantic_annotations = CppSemanticAttributeAdder::new(ctx.options(), &mut attrs);
+                semantic_annotations.original_name(&original_name);
             }
         }
 
@@ -4117,15 +4121,17 @@ impl CodeGenerator for Function {
             attributes.push(attributes::doc(comment));
         }
 
+        let mut semantic_annotations = CppSemanticAttributeAdder::new(&ctx.options(), &mut attributes);
+
         if is_pure_virtual {
-            attributes.push(attributes::is_pure_virtual());
+            semantic_annotations.is_pure_virtual();
         }
 
         if is_virtual {
-            attributes.push(attributes::is_virtual());
+            semantic_annotations.is_virtual();
         }
 
-        attributes.push(attributes::visibility(self.visibility()));
+        semantic_annotations.visibility(self.visibility());
 
         let abi = match signature.abi() {
             Abi::ThisCall if !ctx.options().rust_features().thiscall_abi => {
@@ -4152,11 +4158,11 @@ impl CodeGenerator for Function {
             write!(&mut canonical_name, "{}", times_seen).unwrap();
         }
         if canonical_name != self.name() {
-            attributes.push(attributes::original_name(self.name()));
+            semantic_annotations.original_name(self.name());
         }
 
         if let Some(special_member_kind) = self.special_member() {
-            attributes.push(attributes::special_member(special_member_kind));
+            semantic_annotations.special_member(special_member_kind);
         }
 
         let link_name = mangled_name.unwrap_or(name);
@@ -4526,8 +4532,9 @@ pub(crate) fn codegen(
 
 pub mod utils {
     use super::{
-        error, helpers::attributes, RustTy, RustTyAnnotation, ToRustTyOrOpaque,
+        error, RustTy, RustTyAnnotation, ToRustTyOrOpaque,
     };
+    use crate::codegen::helpers::{CppSemanticAttributeSingle, CppSemanticAttributeCreator};
     use crate::ir::context::BindgenContext;
     use crate::ir::function::{Abi, FunctionSig};
     use crate::ir::item::{Item, ItemCanonicalPath};
@@ -4857,20 +4864,22 @@ pub mod utils {
             let ts = quote! {
                 -> #ret_ty
             };
+            let mut semantic_annotation = CppSemanticAttributeSingle::new(ctx.options());
+            match annotations {
+                super::RustTyAnnotation::None => {},
+                super::RustTyAnnotation::Reference => {
+                    semantic_annotation.ret_type_reference()
+                }
+                super::RustTyAnnotation::RValueReference => {
+                    semantic_annotation.ret_type_rvalue_reference()
+                }
+                super::RustTyAnnotation::HasUnusedTemplateArgs => {
+                    semantic_annotation.unused_template_param_in_arg_or_return()
+                }
+            };
             (
                 ts,
-                match annotations {
-                    super::RustTyAnnotation::None => quote! {},
-                    super::RustTyAnnotation::Reference => {
-                        attributes::ret_type_reference()
-                    }
-                    super::RustTyAnnotation::RValueReference => {
-                        attributes::ret_type_rvalue_reference()
-                    }
-                    super::RustTyAnnotation::HasUnusedTemplateArgs => {
-                        attributes::unused_template_param_in_arg_or_return()
-                    }
-                },
+                semantic_annotation.result()
             )
         }
     }
@@ -4939,16 +4948,17 @@ pub mod utils {
 
                 assert!(!arg_name.is_empty());
                 let arg_name = ctx.rust_ident(arg_name);
-                let arg_attr = match arg_details.annotation {
-                    RustTyAnnotation::None => quote! {},
+                let mut semantic_annotation = CppSemanticAttributeSingle::new(ctx.options());
+                match arg_details.annotation {
+                    RustTyAnnotation::None => {},
                     RustTyAnnotation::Reference => {
-                        attributes::arg_type_reference(&arg_name)
+                        semantic_annotation.arg_type_reference(&arg_name)
                     }
                     RustTyAnnotation::RValueReference => {
-                        attributes::arg_type_rvalue_reference(&arg_name)
+                        semantic_annotation.arg_type_rvalue_reference(&arg_name)
                     }
                     RustTyAnnotation::HasUnusedTemplateArgs => {
-                        attributes::unused_template_param_in_arg_or_return()
+                        semantic_annotation.unused_template_param_in_arg_or_return()
                     }
                 };
 
@@ -4956,7 +4966,7 @@ pub mod utils {
                     quote! {
                         #arg_name : #arg_ty
                     },
-                    arg_attr,
+                    semantic_annotation.result()
                 )
             })
             .unzip();

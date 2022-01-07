@@ -576,6 +576,11 @@ impl Builder {
                 .push("--use-specific-virtual-function-receiver".into());
         }
 
+        if self.options.cpp_semantic_attributes {
+            output_vector
+                .push("--cpp-semantic-attributes".into());
+        }
+
         // Add clang arguments
 
         output_vector.push("--".into());
@@ -1464,6 +1469,15 @@ impl Builder {
         self
     }
 
+    /// If true, add attributes with details of underlying C++ semantics.
+    /// This is useful for downstream code generators that may
+    /// interpret the bindgen output.
+    pub fn cpp_semantic_attributes(mut self, doit: bool) -> Self {
+        self.options.cpp_semantic_attributes = doit;
+        self
+    }
+
+
     /// Generate the Rust bindings using the options built up thus far.
     pub fn generate(mut self) -> Result<Bindings, ()> {
         // Add any extra arguments from the environment to the clang command line.
@@ -1997,6 +2011,11 @@ struct BindgenOptions {
     /// of the complexities around pointer offsets. This overrides that
     /// behavior to indicate the specific type.
     use_specific_virtual_function_receiver: bool,
+
+    /// Whether to add extra attributes describing the underlying C++
+    /// semantics. This is useful for downstream code generators that may
+    /// interpret the bindgen output.
+    cpp_semantic_attributes: bool,
 }
 
 /// TODO(emilio): This is sort of a lie (see the error message that results from
@@ -2143,6 +2162,7 @@ impl Default for BindgenOptions {
             c_naming: false,
             force_explicit_padding: false,
             use_specific_virtual_function_receiver: false,
+            cpp_semantic_attributes: false,
         }
     }
 }
