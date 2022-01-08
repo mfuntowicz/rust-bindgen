@@ -4164,6 +4164,9 @@ impl CodeGenerator for Function {
         if let Some(special_member_kind) = self.special_member() {
             semantic_annotations.special_member(special_member_kind);
         }
+        if self.deleted_fn() {
+            semantic_annotations.deleted_fn();
+        }
 
         let link_name = mangled_name.unwrap_or(name);
         if !utils::names_will_be_identical_after_mangling(

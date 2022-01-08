@@ -156,6 +156,10 @@ pub trait CppSemanticAttributeCreator {
         self.add_ident("unused_template_param")
     }
 
+    fn deleted_fn(&mut self) {
+        self.add_ident("deleted")
+    }
+
     fn layout(&mut self, layout: &Layout) {
         let sz = ast_ty::int_expr(layout.size as i64);
         let align = ast_ty::int_expr(layout.align as i64);
@@ -297,8 +301,8 @@ pub mod ast_ty {
                 }
             }
             None => {
-                if ctx.options().use_core &&
-                    ctx.options().rust_features.core_ffi_c_void
+                if ctx.options().use_core
+                    && ctx.options().rust_features.core_ffi_c_void
                 {
                     quote! { ::core::ffi::c_void }
                 } else {

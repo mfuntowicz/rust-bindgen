@@ -122,6 +122,9 @@ pub struct Function {
 
     /// C++ visibility
     visibility: Visibility,
+
+    /// Whether it's deleted (=default)
+    is_deleted: bool,
 }
 
 impl Function {
@@ -135,6 +138,7 @@ impl Function {
         linkage: Linkage,
         special_member: Option<SpecialMemberKind>,
         visibility: Visibility,
+        is_deleted: bool,
     ) -> Self {
         Function {
             name,
@@ -145,6 +149,7 @@ impl Function {
             linkage,
             special_member,
             visibility,
+            is_deleted,
         }
     }
 
@@ -186,6 +191,11 @@ impl Function {
     /// Whether it is private
     pub fn visibility(&self) -> Visibility {
         self.visibility
+    }
+
+    /// Whether this is a function that's been deleted (=delete)
+    pub fn deleted_fn(&self) -> bool {
+        self.is_deleted
     }
 }
 
@@ -643,9 +653,6 @@ impl ClangSubItemParser for Function {
             if !context.options().generate_inline_functions {
                 return Err(ParseError::Continue);
             }
-            if cursor.is_deleted_function() {
-                return Err(ParseError::Continue);
-            }
         }
 
         let linkage = cursor.linkage();
@@ -699,6 +706,7 @@ impl ClangSubItemParser for Function {
             linkage,
             special_member,
             visibility,
+            cursor.is_deleted_function(),
         );
         Ok(ParseResult::New(function, Some(cursor)))
     }
