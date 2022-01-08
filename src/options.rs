@@ -995,6 +995,10 @@ where
         builder = builder.explicit_padding(true);
     }
 
+    if matches.is_present("cpp-semantic-attributes") {
+        builder = builder.cpp_semantic_attributes(true);
+    }
+
     let verbose = matches.is_present("verbose");
 
     Ok((builder, output, verbose))
