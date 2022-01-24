@@ -435,15 +435,6 @@ impl FunctionSig {
 
         let spelling = cursor.spelling();
 
-        // Don't parse operatorxx functions in C++
-        let is_operator = |spelling: &str| {
-            spelling.starts_with("operator") &&
-                !clang::is_valid_identifier(spelling)
-        };
-        if is_operator(&spelling) {
-            return Err(ParseError::Continue);
-        }
-
         // Constructors of non-type template parameter classes for some reason
         // include the template parameter in their name. Just skip them, since
         // we don't handle well non-type template parameters anyway.
@@ -682,20 +673,40 @@ impl ClangSubItemParser for Function {
             name.push_str("_destructor");
         }
 
-        let mangled_name = cursor_mangling(context, &cursor);
-        let comment = cursor.raw_comment();
-
-        let special_member = if cursor.is_default_constructor() {
-            Some(SpecialMemberKind::DefaultConstructor)
-        } else if cursor.is_copy_constructor() {
-            Some(SpecialMemberKind::CopyConstructor)
-        } else if cursor.is_move_constructor() {
-            Some(SpecialMemberKind::MoveConstructor)
-        } else if cursor.kind() == clang_sys::CXCursor_Destructor {
-            Some(SpecialMemberKind::Destructor)
+        let operator_suffix = name.strip_prefix("operator");
+        let special_member = if let Some(operator_suffix) = operator_suffix {
+            // We can't represent operatorxx functions as-is because
+            // they are not valid identifiers
+            if context.options().represent_cxx_operators {
+                let (new_suffix, special_member) = match operator_suffix {
+                    "=" => ("equals", SpecialMemberKind::AssignmentOperator),
+                    _ => return Err(ParseError::Continue)
+                };
+                name = format!("operator_{}", new_suffix);
+                Some(special_member)
+            } else {
+                return Err(ParseError::Continue)
+            }
         } else {
             None
         };
+
+        let mangled_name = cursor_mangling(context, &cursor);
+        let comment = cursor.raw_comment();
+
+        let special_member = special_member.or_else(|| {
+            if cursor.is_default_constructor() {
+                Some(SpecialMemberKind::DefaultConstructor)
+            } else if cursor.is_copy_constructor() {
+                Some(SpecialMemberKind::CopyConstructor)
+            } else if cursor.is_move_constructor() {
+                Some(SpecialMemberKind::MoveConstructor)
+            } else if cursor.kind() == clang_sys::CXCursor_Destructor {
+                Some(SpecialMemberKind::Destructor)
+            } else {
+                None
+            }
+        });
 
         let function = Self::new(
             name,

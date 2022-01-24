@@ -100,6 +100,7 @@ pub trait CppSemanticAttributeCreator {
             SpecialMemberKind::CopyConstructor => "copy_ctor",
             SpecialMemberKind::MoveConstructor => "move_ctor",
             SpecialMemberKind::Destructor => "dtor",
+            SpecialMemberKind::AssignmentOperator => "assignment_operator",
         };
         self.add(quote! {
             special_member(#kind_str)

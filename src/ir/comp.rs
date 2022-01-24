@@ -83,6 +83,7 @@ pub enum SpecialMemberKind {
     CopyConstructor,
     MoveConstructor,
     Destructor,
+    AssignmentOperator,
 }
 
 /// A struct representing a C++ method, either static, normal, or virtual.

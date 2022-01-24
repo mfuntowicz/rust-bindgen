@@ -581,6 +581,11 @@ impl Builder {
                 .push("--cpp-semantic-attributes".into());
         }
 
+        if self.options.represent_cxx_operators {
+            output_vector
+                .push("--represent-cxx-operators".into());
+        }
+
         // Add clang arguments
 
         output_vector.push("--".into());
@@ -1477,6 +1482,13 @@ impl Builder {
         self
     }
 
+    /// If true, output existence of C++ overloaded operators. These
+    /// are not generally useful, but may be useful to downstream code
+    /// generators. At present, only operator= is noted.
+    pub fn represent_cxx_operators(mut self, doit: bool) -> Self {
+        self.options.represent_cxx_operators = doit;
+        self
+    }
 
     /// Generate the Rust bindings using the options built up thus far.
     pub fn generate(mut self) -> Result<Bindings, ()> {
@@ -2016,6 +2028,11 @@ struct BindgenOptions {
     /// semantics. This is useful for downstream code generators that may
     /// interpret the bindgen output.
     cpp_semantic_attributes: bool,
+
+    /// Whether to output details of C++ overloaded operators. These can't
+    /// be called as functions because their names aren't valid identifiers,
+    /// but the metadata may be useful to downstream code generators.
+    represent_cxx_operators: bool,
 }
 
 /// TODO(emilio): This is sort of a lie (see the error message that results from
@@ -2163,6 +2180,7 @@ impl Default for BindgenOptions {
             force_explicit_padding: false,
             use_specific_virtual_function_receiver: false,
             cpp_semantic_attributes: false,
+            represent_cxx_operators: false,
         }
     }
 }
