@@ -1286,10 +1286,10 @@ impl<'a> FieldCodegen<'a> for FieldData {
         let field_item =
             self.ty().into_resolver().through_type_refs().resolve(ctx);
         let field_ty = field_item.expect_type();
-        let mut ty = self
+        let ty = self
             .ty()
-            .to_rust_ty_or_opaque(ctx, &())
-            .ignore_annotations();
+            .to_rust_ty_or_opaque(ctx, &());
+        let (mut ty, ty_annotations) = ty.to_outer_type();
         ty.append_implicit_template_params(ctx, field_item);
 
         // NB: If supported, we use proper `union` types.
@@ -1353,12 +1353,22 @@ impl<'a> FieldCodegen<'a> for FieldData {
         let accessor_kind =
             self.annotations().accessor_kind().unwrap_or(accessor_kind);
 
+        let mut attributes = Vec::new();
+        let mut csaa = CppSemanticAttributeAdder::new(ctx.options(), &mut attributes);
+        match ty_annotations {
+            RustTyAnnotation::Reference => csaa.field_type_reference(),
+            RustTyAnnotation::RValueReference => csaa.field_type_rvalue_reference(),
+            _ => {}
+        };
+
         if is_private {
             field.append_all(quote! {
+                #(#attributes),*
                 #field_ident : #ty ,
             });
         } else {
             field.append_all(quote! {
+                #(#attributes),*
                 pub #field_ident : #ty ,
             });
         }

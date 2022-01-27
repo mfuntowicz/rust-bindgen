@@ -127,6 +127,14 @@ pub trait CppSemanticAttributeCreator {
         })
     }
 
+    fn field_type_reference(&mut self) {
+        self.add_ident("reference")
+    }
+
+    fn field_type_rvalue_reference(&mut self) {
+        self.add_ident("rvalue_reference")
+    }
+
     fn is_virtual(&mut self, ) {
         self.add_ident("bindgen_virtual")
     }
