@@ -31,12 +31,6 @@ include = [
 [lib]
 path = "src/lib.rs"
 
-[[bin]]
-name = "bindgen"
-path = "src/main.rs"
-doc = false
-required-features = ["clap"]
-
 [dev-dependencies]
 diff = "0.1"
 clap = "2"
