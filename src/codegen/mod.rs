@@ -897,13 +897,7 @@ impl CodeGenerator for Type {
                     {
                         semantic_annotations.discards_template_param();
                     }
-                    RustTyAnnotation::None |
-                    RustTyAnnotation::Opaque |
-                    RustTyAnnotation::Reference |
-                    RustTyAnnotation::RValueReference => {}
-                    RustTyAnnotation::HasUnusedTemplateArgs => {
-                        semantic_annotations.discards_template_param();
-                    }
+                    _ => {}
                 };
                 tokens.append_all(semantic_annotations.result());
 
