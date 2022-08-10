@@ -530,6 +530,11 @@ impl Item {
         &mut self.kind
     }
 
+    /// Where in the source is this item located?
+    pub fn location(&self) -> Option<&clang::SourceLocation> {
+        self.location.as_ref()
+    }
+
     /// Get an identifier that differentiates this item from its siblings.
     ///
     /// This should stay relatively stable in the face of code motion outside or
@@ -1122,6 +1127,11 @@ impl Item {
             TypeKind::Enum(..) => "enum",
             _ => return None,
         })
+    }
+
+    /// Whether this is a #[must_use] type.
+    pub fn must_use(&self, ctx: &BindgenContext) -> bool {
+        self.annotations().must_use_type() || ctx.must_use_type_by_name(self)
     }
 }
 
@@ -1921,7 +1931,7 @@ impl ClangItemParser for Item {
 
         // See tests/headers/const_tparam.hpp and
         // tests/headers/variadic_tname.hpp.
-        let name = ty_spelling.replace("const ", "").replace(".", "");
+        let name = ty_spelling.replace("const ", "").replace('.', "");
 
         let id = with_id.unwrap_or_else(|| ctx.next_item_id());
         let item = Item::new(

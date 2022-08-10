@@ -22,16 +22,23 @@ fn bindgen_test_layout_Base() {
         4usize,
         concat!("Alignment of ", stringify!(Base))
     );
-    assert_eq!(
-        unsafe { &(*(::std::ptr::null::<Base>())).large as *const _ as usize },
-        0usize,
-        concat!(
-            "Offset of field: ",
-            stringify!(Base),
-            "::",
-            stringify!(large)
-        )
-    );
+    fn test_field_large() {
+        assert_eq!(
+            unsafe {
+                let uninit = ::std::mem::MaybeUninit::<Base>::uninit();
+                let ptr = uninit.as_ptr();
+                ::std::ptr::addr_of!((*ptr).large) as usize - ptr as usize
+            },
+            0usize,
+            concat!(
+                "Offset of field: ",
+                stringify!(Base),
+                "::",
+                stringify!(large)
+            )
+        );
+    }
+    test_field_large();
 }
 impl Default for Base {
     fn default() -> Self {

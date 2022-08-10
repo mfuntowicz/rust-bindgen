@@ -24,32 +24,40 @@ fn bindgen_test_layout_HasPrivate() {
         4usize,
         concat!("Alignment of ", stringify!(HasPrivate))
     );
-    assert_eq!(
-        unsafe {
-            &(*(::std::ptr::null::<HasPrivate>())).mNotPrivate as *const _
-                as usize
-        },
-        0usize,
-        concat!(
-            "Offset of field: ",
-            stringify!(HasPrivate),
-            "::",
-            stringify!(mNotPrivate)
-        )
-    );
-    assert_eq!(
-        unsafe {
-            &(*(::std::ptr::null::<HasPrivate>())).mIsPrivate as *const _
-                as usize
-        },
-        4usize,
-        concat!(
-            "Offset of field: ",
-            stringify!(HasPrivate),
-            "::",
-            stringify!(mIsPrivate)
-        )
-    );
+    fn test_field_mNotPrivate() {
+        assert_eq!(
+            unsafe {
+                let uninit = ::std::mem::MaybeUninit::<HasPrivate>::uninit();
+                let ptr = uninit.as_ptr();
+                ::std::ptr::addr_of!((*ptr).mNotPrivate) as usize - ptr as usize
+            },
+            0usize,
+            concat!(
+                "Offset of field: ",
+                stringify!(HasPrivate),
+                "::",
+                stringify!(mNotPrivate)
+            )
+        );
+    }
+    test_field_mNotPrivate();
+    fn test_field_mIsPrivate() {
+        assert_eq!(
+            unsafe {
+                let uninit = ::std::mem::MaybeUninit::<HasPrivate>::uninit();
+                let ptr = uninit.as_ptr();
+                ::std::ptr::addr_of!((*ptr).mIsPrivate) as usize - ptr as usize
+            },
+            4usize,
+            concat!(
+                "Offset of field: ",
+                stringify!(HasPrivate),
+                "::",
+                stringify!(mIsPrivate)
+            )
+        );
+    }
+    test_field_mIsPrivate();
 }
 /// <div rustbindgen private></div>
 #[repr(C)]
@@ -70,32 +78,41 @@ fn bindgen_test_layout_VeryPrivate() {
         4usize,
         concat!("Alignment of ", stringify!(VeryPrivate))
     );
-    assert_eq!(
-        unsafe {
-            &(*(::std::ptr::null::<VeryPrivate>())).mIsPrivate as *const _
-                as usize
-        },
-        0usize,
-        concat!(
-            "Offset of field: ",
-            stringify!(VeryPrivate),
-            "::",
-            stringify!(mIsPrivate)
-        )
-    );
-    assert_eq!(
-        unsafe {
-            &(*(::std::ptr::null::<VeryPrivate>())).mIsAlsoPrivate as *const _
-                as usize
-        },
-        4usize,
-        concat!(
-            "Offset of field: ",
-            stringify!(VeryPrivate),
-            "::",
-            stringify!(mIsAlsoPrivate)
-        )
-    );
+    fn test_field_mIsPrivate() {
+        assert_eq!(
+            unsafe {
+                let uninit = ::std::mem::MaybeUninit::<VeryPrivate>::uninit();
+                let ptr = uninit.as_ptr();
+                ::std::ptr::addr_of!((*ptr).mIsPrivate) as usize - ptr as usize
+            },
+            0usize,
+            concat!(
+                "Offset of field: ",
+                stringify!(VeryPrivate),
+                "::",
+                stringify!(mIsPrivate)
+            )
+        );
+    }
+    test_field_mIsPrivate();
+    fn test_field_mIsAlsoPrivate() {
+        assert_eq!(
+            unsafe {
+                let uninit = ::std::mem::MaybeUninit::<VeryPrivate>::uninit();
+                let ptr = uninit.as_ptr();
+                ::std::ptr::addr_of!((*ptr).mIsAlsoPrivate) as usize -
+                    ptr as usize
+            },
+            4usize,
+            concat!(
+                "Offset of field: ",
+                stringify!(VeryPrivate),
+                "::",
+                stringify!(mIsAlsoPrivate)
+            )
+        );
+    }
+    test_field_mIsAlsoPrivate();
 }
 /// <div rustbindgen private></div>
 #[repr(C)]
@@ -117,30 +134,40 @@ fn bindgen_test_layout_ContradictPrivate() {
         4usize,
         concat!("Alignment of ", stringify!(ContradictPrivate))
     );
-    assert_eq!(
-        unsafe {
-            &(*(::std::ptr::null::<ContradictPrivate>())).mNotPrivate
-                as *const _ as usize
-        },
-        0usize,
-        concat!(
-            "Offset of field: ",
-            stringify!(ContradictPrivate),
-            "::",
-            stringify!(mNotPrivate)
-        )
-    );
-    assert_eq!(
-        unsafe {
-            &(*(::std::ptr::null::<ContradictPrivate>())).mIsPrivate as *const _
-                as usize
-        },
-        4usize,
-        concat!(
-            "Offset of field: ",
-            stringify!(ContradictPrivate),
-            "::",
-            stringify!(mIsPrivate)
-        )
-    );
+    fn test_field_mNotPrivate() {
+        assert_eq!(
+            unsafe {
+                let uninit =
+                    ::std::mem::MaybeUninit::<ContradictPrivate>::uninit();
+                let ptr = uninit.as_ptr();
+                ::std::ptr::addr_of!((*ptr).mNotPrivate) as usize - ptr as usize
+            },
+            0usize,
+            concat!(
+                "Offset of field: ",
+                stringify!(ContradictPrivate),
+                "::",
+                stringify!(mNotPrivate)
+            )
+        );
+    }
+    test_field_mNotPrivate();
+    fn test_field_mIsPrivate() {
+        assert_eq!(
+            unsafe {
+                let uninit =
+                    ::std::mem::MaybeUninit::<ContradictPrivate>::uninit();
+                let ptr = uninit.as_ptr();
+                ::std::ptr::addr_of!((*ptr).mIsPrivate) as usize - ptr as usize
+            },
+            4usize,
+            concat!(
+                "Offset of field: ",
+                stringify!(ContradictPrivate),
+                "::",
+                stringify!(mIsPrivate)
+            )
+        );
+    }
+    test_field_mIsPrivate();
 }

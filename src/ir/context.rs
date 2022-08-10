@@ -368,7 +368,7 @@ pub struct BindgenContext {
     translation_unit: clang::TranslationUnit,
 
     /// Target information that can be useful for some stuff.
-    target_info: Option<clang::TargetInfo>,
+    target_info: clang::TargetInfo,
 
     /// The options given by the user via cli or other medium.
     options: BindgenOptions,
@@ -584,10 +584,7 @@ If you encounter an error missing from this list, please file an issue or a PR!"
 
     /// Returns `true` if the target architecture is wasm32
     pub fn is_target_wasm32(&self) -> bool {
-        match self.target_info {
-            Some(ref ti) => ti.triple.starts_with("wasm32-"),
-            None => false,
-        }
+        self.target_info.triple.starts_with("wasm32-")
     }
 
     /// Creates a timer for the current bindgen phase. If time_phases is `true`,
@@ -600,10 +597,7 @@ If you encounter an error missing from this list, please file an issue or a PR!"
     /// Returns the pointer width to use for the target for the current
     /// translation.
     pub fn target_pointer_size(&self) -> usize {
-        if let Some(ref ti) = self.target_info {
-            return ti.pointer_width / 8;
-        }
-        mem::size_of::<*mut ()>()
+        self.target_info.pointer_width / 8
     }
 
     /// Get the stack of partially parsed types that we are in the middle of
@@ -842,9 +836,9 @@ If you encounter an error missing from this list, please file an issue or a PR!"
             )
         {
             let mut s = name.to_owned();
-            s = s.replace("@", "_");
-            s = s.replace("?", "_");
-            s = s.replace("$", "_");
+            s = s.replace('@', "_");
+            s = s.replace('?', "_");
+            s = s.replace('$', "_");
             s.push('_');
             return Cow::Owned(s);
         }
@@ -2296,7 +2290,8 @@ If you encounter an error missing from this list, please file an issue or a PR!"
                     // game.
                     if self.options().allowlisted_types.is_empty() &&
                         self.options().allowlisted_functions.is_empty() &&
-                        self.options().allowlisted_vars.is_empty()
+                        self.options().allowlisted_vars.is_empty() &&
+                        self.options().allowlisted_files.is_empty()
                     {
                         return true;
                     }
@@ -2305,6 +2300,23 @@ If you encounter an error missing from this list, please file an issue or a PR!"
                     // you know what you're doing.
                     if item.annotations().use_instead_of().is_some() {
                         return true;
+                    }
+
+                    // Items with a source location in an explicitly allowlisted file
+                    // are always included.
+                    if !self.options().allowlisted_files.is_empty() {
+                        if let Some(location) = item.location() {
+                            let (file, _, _, _) = location.location();
+                            if let Some(filename) = file.name() {
+                                if self
+                                    .options()
+                                    .allowlisted_files
+                                    .matches(&filename)
+                                {
+                                    return true;
+                                }
+                            }
+                        }
                     }
 
                     let name = item.path_for_allowlisting(self)[1..].join("::");

@@ -10,8 +10,8 @@
 pub struct foo {
     pub member: foo__bindgen_ty_1,
 }
-pub const foo_FOO_A: ::std::os::raw::c_uint = 0;
-pub const foo_FOO_B: ::std::os::raw::c_uint = 1;
+pub const foo_FOO_A: foo__bindgen_ty_1 = 0;
+pub const foo_FOO_B: foo__bindgen_ty_1 = 1;
 pub type foo__bindgen_ty_1 = ::std::os::raw::c_uint;
 #[test]
 fn bindgen_test_layout_foo() {
@@ -25,16 +25,23 @@ fn bindgen_test_layout_foo() {
         4usize,
         concat!("Alignment of ", stringify!(foo))
     );
-    assert_eq!(
-        unsafe { &(*(::std::ptr::null::<foo>())).member as *const _ as usize },
-        0usize,
-        concat!(
-            "Offset of field: ",
-            stringify!(foo),
-            "::",
-            stringify!(member)
-        )
-    );
+    fn test_field_member() {
+        assert_eq!(
+            unsafe {
+                let uninit = ::std::mem::MaybeUninit::<foo>::uninit();
+                let ptr = uninit.as_ptr();
+                ::std::ptr::addr_of!((*ptr).member) as usize - ptr as usize
+            },
+            0usize,
+            concat!(
+                "Offset of field: ",
+                stringify!(foo),
+                "::",
+                stringify!(member)
+            )
+        );
+    }
+    test_field_member();
 }
 impl Default for foo {
     fn default() -> Self {

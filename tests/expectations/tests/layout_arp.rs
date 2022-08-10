@@ -40,19 +40,23 @@ fn bindgen_test_layout_ether_addr() {
         1usize,
         concat!("Alignment of ", stringify!(ether_addr))
     );
-    assert_eq!(
-        unsafe {
-            &(*(::std::ptr::null::<ether_addr>())).addr_bytes as *const _
-                as usize
-        },
-        0usize,
-        concat!(
-            "Offset of field: ",
-            stringify!(ether_addr),
-            "::",
-            stringify!(addr_bytes)
-        )
-    );
+    fn test_field_addr_bytes() {
+        assert_eq!(
+            unsafe {
+                let uninit = ::std::mem::MaybeUninit::<ether_addr>::uninit();
+                let ptr = uninit.as_ptr();
+                ::std::ptr::addr_of!((*ptr).addr_bytes) as usize - ptr as usize
+            },
+            0usize,
+            concat!(
+                "Offset of field: ",
+                stringify!(ether_addr),
+                "::",
+                stringify!(addr_bytes)
+            )
+        );
+    }
+    test_field_addr_bytes();
 }
 /// ARP header IPv4 payload.
 #[repr(C, packed)]
@@ -79,54 +83,74 @@ fn bindgen_test_layout_arp_ipv4() {
         1usize,
         concat!("Alignment of ", stringify!(arp_ipv4))
     );
-    assert_eq!(
-        unsafe {
-            &(*(::std::ptr::null::<arp_ipv4>())).arp_sha as *const _ as usize
-        },
-        0usize,
-        concat!(
-            "Offset of field: ",
-            stringify!(arp_ipv4),
-            "::",
-            stringify!(arp_sha)
-        )
-    );
-    assert_eq!(
-        unsafe {
-            &(*(::std::ptr::null::<arp_ipv4>())).arp_sip as *const _ as usize
-        },
-        6usize,
-        concat!(
-            "Offset of field: ",
-            stringify!(arp_ipv4),
-            "::",
-            stringify!(arp_sip)
-        )
-    );
-    assert_eq!(
-        unsafe {
-            &(*(::std::ptr::null::<arp_ipv4>())).arp_tha as *const _ as usize
-        },
-        10usize,
-        concat!(
-            "Offset of field: ",
-            stringify!(arp_ipv4),
-            "::",
-            stringify!(arp_tha)
-        )
-    );
-    assert_eq!(
-        unsafe {
-            &(*(::std::ptr::null::<arp_ipv4>())).arp_tip as *const _ as usize
-        },
-        16usize,
-        concat!(
-            "Offset of field: ",
-            stringify!(arp_ipv4),
-            "::",
-            stringify!(arp_tip)
-        )
-    );
+    fn test_field_arp_sha() {
+        assert_eq!(
+            unsafe {
+                let uninit = ::std::mem::MaybeUninit::<arp_ipv4>::uninit();
+                let ptr = uninit.as_ptr();
+                ::std::ptr::addr_of!((*ptr).arp_sha) as usize - ptr as usize
+            },
+            0usize,
+            concat!(
+                "Offset of field: ",
+                stringify!(arp_ipv4),
+                "::",
+                stringify!(arp_sha)
+            )
+        );
+    }
+    test_field_arp_sha();
+    fn test_field_arp_sip() {
+        assert_eq!(
+            unsafe {
+                let uninit = ::std::mem::MaybeUninit::<arp_ipv4>::uninit();
+                let ptr = uninit.as_ptr();
+                ::std::ptr::addr_of!((*ptr).arp_sip) as usize - ptr as usize
+            },
+            6usize,
+            concat!(
+                "Offset of field: ",
+                stringify!(arp_ipv4),
+                "::",
+                stringify!(arp_sip)
+            )
+        );
+    }
+    test_field_arp_sip();
+    fn test_field_arp_tha() {
+        assert_eq!(
+            unsafe {
+                let uninit = ::std::mem::MaybeUninit::<arp_ipv4>::uninit();
+                let ptr = uninit.as_ptr();
+                ::std::ptr::addr_of!((*ptr).arp_tha) as usize - ptr as usize
+            },
+            10usize,
+            concat!(
+                "Offset of field: ",
+                stringify!(arp_ipv4),
+                "::",
+                stringify!(arp_tha)
+            )
+        );
+    }
+    test_field_arp_tha();
+    fn test_field_arp_tip() {
+        assert_eq!(
+            unsafe {
+                let uninit = ::std::mem::MaybeUninit::<arp_ipv4>::uninit();
+                let ptr = uninit.as_ptr();
+                ::std::ptr::addr_of!((*ptr).arp_tip) as usize - ptr as usize
+            },
+            16usize,
+            concat!(
+                "Offset of field: ",
+                stringify!(arp_ipv4),
+                "::",
+                stringify!(arp_tip)
+            )
+        );
+    }
+    test_field_arp_tip();
 }
 /// ARP header.
 #[repr(C, packed)]
@@ -151,76 +175,106 @@ fn bindgen_test_layout_arp_hdr() {
         1usize,
         concat!("Alignment of ", stringify!(arp_hdr))
     );
-    assert_eq!(
-        unsafe {
-            &(*(::std::ptr::null::<arp_hdr>())).arp_hrd as *const _ as usize
-        },
-        0usize,
-        concat!(
-            "Offset of field: ",
-            stringify!(arp_hdr),
-            "::",
-            stringify!(arp_hrd)
-        )
-    );
-    assert_eq!(
-        unsafe {
-            &(*(::std::ptr::null::<arp_hdr>())).arp_pro as *const _ as usize
-        },
-        2usize,
-        concat!(
-            "Offset of field: ",
-            stringify!(arp_hdr),
-            "::",
-            stringify!(arp_pro)
-        )
-    );
-    assert_eq!(
-        unsafe {
-            &(*(::std::ptr::null::<arp_hdr>())).arp_hln as *const _ as usize
-        },
-        4usize,
-        concat!(
-            "Offset of field: ",
-            stringify!(arp_hdr),
-            "::",
-            stringify!(arp_hln)
-        )
-    );
-    assert_eq!(
-        unsafe {
-            &(*(::std::ptr::null::<arp_hdr>())).arp_pln as *const _ as usize
-        },
-        5usize,
-        concat!(
-            "Offset of field: ",
-            stringify!(arp_hdr),
-            "::",
-            stringify!(arp_pln)
-        )
-    );
-    assert_eq!(
-        unsafe {
-            &(*(::std::ptr::null::<arp_hdr>())).arp_op as *const _ as usize
-        },
-        6usize,
-        concat!(
-            "Offset of field: ",
-            stringify!(arp_hdr),
-            "::",
-            stringify!(arp_op)
-        )
-    );
-    assert_eq!(
-        unsafe {
-            &(*(::std::ptr::null::<arp_hdr>())).arp_data as *const _ as usize
-        },
-        8usize,
-        concat!(
-            "Offset of field: ",
-            stringify!(arp_hdr),
-            "::",
-            stringify!(arp_data)
-        )
-    );
+    fn test_field_arp_hrd() {
+        assert_eq!(
+            unsafe {
+                let uninit = ::std::mem::MaybeUninit::<arp_hdr>::uninit();
+                let ptr = uninit.as_ptr();
+                ::std::ptr::addr_of!((*ptr).arp_hrd) as usize - ptr as usize
+            },
+            0usize,
+            concat!(
+                "Offset of field: ",
+                stringify!(arp_hdr),
+                "::",
+                stringify!(arp_hrd)
+            )
+        );
+    }
+    test_field_arp_hrd();
+    fn test_field_arp_pro() {
+        assert_eq!(
+            unsafe {
+                let uninit = ::std::mem::MaybeUninit::<arp_hdr>::uninit();
+                let ptr = uninit.as_ptr();
+                ::std::ptr::addr_of!((*ptr).arp_pro) as usize - ptr as usize
+            },
+            2usize,
+            concat!(
+                "Offset of field: ",
+                stringify!(arp_hdr),
+                "::",
+                stringify!(arp_pro)
+            )
+        );
+    }
+    test_field_arp_pro();
+    fn test_field_arp_hln() {
+        assert_eq!(
+            unsafe {
+                let uninit = ::std::mem::MaybeUninit::<arp_hdr>::uninit();
+                let ptr = uninit.as_ptr();
+                ::std::ptr::addr_of!((*ptr).arp_hln) as usize - ptr as usize
+            },
+            4usize,
+            concat!(
+                "Offset of field: ",
+                stringify!(arp_hdr),
+                "::",
+                stringify!(arp_hln)
+            )
+        );
+    }
+    test_field_arp_hln();
+    fn test_field_arp_pln() {
+        assert_eq!(
+            unsafe {
+                let uninit = ::std::mem::MaybeUninit::<arp_hdr>::uninit();
+                let ptr = uninit.as_ptr();
+                ::std::ptr::addr_of!((*ptr).arp_pln) as usize - ptr as usize
+            },
+            5usize,
+            concat!(
+                "Offset of field: ",
+                stringify!(arp_hdr),
+                "::",
+                stringify!(arp_pln)
+            )
+        );
+    }
+    test_field_arp_pln();
+    fn test_field_arp_op() {
+        assert_eq!(
+            unsafe {
+                let uninit = ::std::mem::MaybeUninit::<arp_hdr>::uninit();
+                let ptr = uninit.as_ptr();
+                ::std::ptr::addr_of!((*ptr).arp_op) as usize - ptr as usize
+            },
+            6usize,
+            concat!(
+                "Offset of field: ",
+                stringify!(arp_hdr),
+                "::",
+                stringify!(arp_op)
+            )
+        );
+    }
+    test_field_arp_op();
+    fn test_field_arp_data() {
+        assert_eq!(
+            unsafe {
+                let uninit = ::std::mem::MaybeUninit::<arp_hdr>::uninit();
+                let ptr = uninit.as_ptr();
+                ::std::ptr::addr_of!((*ptr).arp_data) as usize - ptr as usize
+            },
+            8usize,
+            concat!(
+                "Offset of field: ",
+                stringify!(arp_hdr),
+                "::",
+                stringify!(arp_data)
+            )
+        );
+    }
+    test_field_arp_data();
 }

@@ -29,19 +29,24 @@ pub mod root {
                 4usize,
                 concat!("Alignment of ", stringify!(typedef_struct))
             );
-            assert_eq!(
-                unsafe {
-                    &(*(::std::ptr::null::<typedef_struct>())).foo as *const _
-                        as usize
-                },
-                0usize,
-                concat!(
-                    "Offset of field: ",
-                    stringify!(typedef_struct),
-                    "::",
-                    stringify!(foo)
-                )
-            );
+            fn test_field_foo() {
+                assert_eq!(
+                    unsafe {
+                        let uninit =
+                            ::std::mem::MaybeUninit::<typedef_struct>::uninit();
+                        let ptr = uninit.as_ptr();
+                        ::std::ptr::addr_of!((*ptr).foo) as usize - ptr as usize
+                    },
+                    0usize,
+                    concat!(
+                        "Offset of field: ",
+                        stringify!(typedef_struct),
+                        "::",
+                        stringify!(foo)
+                    )
+                );
+            }
+            test_field_foo();
         }
         #[repr(u32)]
         #[derive(Debug, Copy, Clone, Hash, PartialEq, Eq)]
@@ -69,19 +74,24 @@ pub mod root {
                 4usize,
                 concat!("Alignment of ", stringify!(_bindgen_ty_1))
             );
-            assert_eq!(
-                unsafe {
-                    &(*(::std::ptr::null::<_bindgen_ty_1>())).foo as *const _
-                        as usize
-                },
-                0usize,
-                concat!(
-                    "Offset of field: ",
-                    stringify!(_bindgen_ty_1),
-                    "::",
-                    stringify!(foo)
-                )
-            );
+            fn test_field_foo() {
+                assert_eq!(
+                    unsafe {
+                        let uninit =
+                            ::std::mem::MaybeUninit::<_bindgen_ty_1>::uninit();
+                        let ptr = uninit.as_ptr();
+                        ::std::ptr::addr_of!((*ptr).foo) as usize - ptr as usize
+                    },
+                    0usize,
+                    concat!(
+                        "Offset of field: ",
+                        stringify!(_bindgen_ty_1),
+                        "::",
+                        stringify!(foo)
+                    )
+                );
+            }
+            test_field_foo();
         }
         pub type typedef_struct = root::_bindgen_mod_id_12::_bindgen_ty_1;
         pub const _bindgen_mod_id_12_BAR:

@@ -37,11 +37,23 @@ pub mod root {
             1usize,
             concat!("Alignment of ", stringify!(c))
         );
-        assert_eq!(
-            unsafe { &(*(::std::ptr::null::<c>())).b as *const _ as usize },
-            0usize,
-            concat!("Offset of field: ", stringify!(c), "::", stringify!(b))
-        );
+        fn test_field_b() {
+            assert_eq!(
+                unsafe {
+                    let uninit = ::std::mem::MaybeUninit::<c>::uninit();
+                    let ptr = uninit.as_ptr();
+                    ::std::ptr::addr_of!((*ptr).b) as usize - ptr as usize
+                },
+                0usize,
+                concat!(
+                    "Offset of field: ",
+                    stringify!(c),
+                    "::",
+                    stringify!(b)
+                )
+            );
+        }
+        test_field_b();
     }
     #[repr(C)]
     #[derive(Debug, Default, Copy, Clone)]
@@ -60,11 +72,23 @@ pub mod root {
             1usize,
             concat!("Alignment of ", stringify!(B))
         );
-        assert_eq!(
-            unsafe { &(*(::std::ptr::null::<B>())).a as *const _ as usize },
-            0usize,
-            concat!("Offset of field: ", stringify!(B), "::", stringify!(a))
-        );
+        fn test_field_a() {
+            assert_eq!(
+                unsafe {
+                    let uninit = ::std::mem::MaybeUninit::<B>::uninit();
+                    let ptr = uninit.as_ptr();
+                    ::std::ptr::addr_of!((*ptr).a) as usize - ptr as usize
+                },
+                0usize,
+                concat!(
+                    "Offset of field: ",
+                    stringify!(B),
+                    "::",
+                    stringify!(a)
+                )
+            );
+        }
+        test_field_a();
     }
     #[repr(C)]
     #[derive(Debug, Default, Copy, Clone)]

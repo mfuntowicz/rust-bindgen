@@ -4,6 +4,3 @@
     non_camel_case_types,
     non_upper_case_globals
 )]
-#![allow(overflowing_literals)]
-
-pub const a: u32 = 18446744073709551611;

@@ -60,19 +60,23 @@ fn bindgen_test_layout_rte_ring_prod() {
         4usize,
         concat!("Alignment of ", stringify!(rte_ring_prod))
     );
-    assert_eq!(
-        unsafe {
-            &(*(::std::ptr::null::<rte_ring_prod>())).watermark as *const _
-                as usize
-        },
-        0usize,
-        concat!(
-            "Offset of field: ",
-            stringify!(rte_ring_prod),
-            "::",
-            stringify!(watermark)
-        )
-    );
+    fn test_field_watermark() {
+        assert_eq!(
+            unsafe {
+                let uninit = ::std::mem::MaybeUninit::<rte_ring_prod>::uninit();
+                let ptr = uninit.as_ptr();
+                ::std::ptr::addr_of!((*ptr).watermark) as usize - ptr as usize
+            },
+            0usize,
+            concat!(
+                "Offset of field: ",
+                stringify!(rte_ring_prod),
+                "::",
+                stringify!(watermark)
+            )
+        );
+    }
+    test_field_watermark();
 }
 #[repr(C)]
 #[derive(Debug, Default, Copy, Clone)]
@@ -91,19 +95,23 @@ fn bindgen_test_layout_rte_ring_cons() {
         4usize,
         concat!("Alignment of ", stringify!(rte_ring_cons))
     );
-    assert_eq!(
-        unsafe {
-            &(*(::std::ptr::null::<rte_ring_cons>())).sc_dequeue as *const _
-                as usize
-        },
-        0usize,
-        concat!(
-            "Offset of field: ",
-            stringify!(rte_ring_cons),
-            "::",
-            stringify!(sc_dequeue)
-        )
-    );
+    fn test_field_sc_dequeue() {
+        assert_eq!(
+            unsafe {
+                let uninit = ::std::mem::MaybeUninit::<rte_ring_cons>::uninit();
+                let ptr = uninit.as_ptr();
+                ::std::ptr::addr_of!((*ptr).sc_dequeue) as usize - ptr as usize
+            },
+            0usize,
+            concat!(
+                "Offset of field: ",
+                stringify!(rte_ring_cons),
+                "::",
+                stringify!(sc_dequeue)
+            )
+        );
+    }
+    test_field_sc_dequeue();
 }
 #[test]
 fn bindgen_test_layout_rte_ring() {

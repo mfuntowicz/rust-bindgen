@@ -235,6 +235,20 @@ pub fn builder() -> Builder {
     Default::default()
 }
 
+fn get_extra_clang_args() -> Vec<String> {
+    // Add any extra arguments from the environment to the clang command line.
+    let extra_clang_args =
+        match get_target_dependent_env_var("BINDGEN_EXTRA_CLANG_ARGS") {
+            None => return vec![],
+            Some(s) => s,
+        };
+    // Try to parse it with shell quoting. If we fail, make it one single big argument.
+    if let Some(strings) = shlex::split(&extra_clang_args) {
+        return strings;
+    }
+    vec![extra_clang_args]
+}
+
 impl Builder {
     /// Generates the command line flags use for creating `Builder`.
     pub fn command_line_flags(&self) -> Vec<String> {
@@ -316,6 +330,7 @@ impl Builder {
             (&self.options.allowlisted_functions, "--allowlist-function"),
             (&self.options.allowlisted_types, "--allowlist-type"),
             (&self.options.allowlisted_vars, "--allowlist-var"),
+            (&self.options.allowlisted_files, "--allowlist-file"),
             (&self.options.no_partialeq_types, "--no-partialeq"),
             (&self.options.no_copy_types, "--no-copy"),
             (&self.options.no_debug_types, "--no-debug"),
@@ -589,6 +604,10 @@ impl Builder {
         if self.options.use_distinct_char16_t {
             output_vector
                 .push("--use-distinct-char16-t".into());
+        }
+        
+        if self.options.vtable_generation {
+            output_vector.push("--vtable-generation".into());
         }
 
         // Add clang arguments
@@ -928,6 +947,12 @@ impl Builder {
     /// [regex](https://docs.rs/regex/*/regex/) docs
     pub fn allowlist_var<T: AsRef<str>>(mut self, arg: T) -> Builder {
         self.options.allowlisted_vars.insert(arg);
+        self
+    }
+
+    /// Allowlist the given file so that its contents appear in the generated bindings.
+    pub fn allowlist_file<T: AsRef<str>>(mut self, arg: T) -> Builder {
+        self.options.allowlisted_files.insert(arg);
         self
     }
 
@@ -1500,20 +1525,19 @@ impl Builder {
         self.options.use_distinct_char16_t = doit;
         self
     }
+    
+    /// If true, enables experimental support to generate vtable functions.
+    ///
+    /// Should mostly work, though some edge cases are likely to be broken.
+    pub fn vtable_generation(mut self, doit: bool) -> Self {
+        self.options.vtable_generation = doit;
+        self
+    }
 
     /// Generate the Rust bindings using the options built up thus far.
-    pub fn generate(mut self) -> Result<Bindings, ()> {
+    pub fn generate(mut self) -> Result<Bindings, BindgenError> {
         // Add any extra arguments from the environment to the clang command line.
-        if let Some(extra_clang_args) =
-            get_target_dependent_env_var("BINDGEN_EXTRA_CLANG_ARGS")
-        {
-            // Try to parse it with shell quoting. If we fail, make it one single big argument.
-            if let Some(strings) = shlex::split(&extra_clang_args) {
-                self.options.clang_args.extend(strings);
-            } else {
-                self.options.clang_args.push(extra_clang_args);
-            };
-        }
+        self.options.clang_args.extend(get_extra_clang_args());
 
         // Transform input headers to arguments on the clang command line.
         self.options.input_header = self.input_headers.pop();
@@ -1597,6 +1621,10 @@ impl Builder {
             .stdout(Stdio::piped());
 
         for a in &self.options.clang_args {
+            cmd.arg(a);
+        }
+
+        for a in get_extra_clang_args() {
             cmd.arg(a);
         }
 
@@ -1762,6 +1790,9 @@ struct BindgenOptions {
 
     /// Allowlisted variables. See docs for `allowlisted_types` for more.
     allowlisted_vars: RegexSet,
+
+    /// The set of files whose contents should be allowlisted.
+    allowlisted_files: RegexSet,
 
     /// The default style of code to generate for enums
     default_enum_style: codegen::EnumVariation,
@@ -2047,6 +2078,9 @@ struct BindgenOptions {
 
     /// Whether char16_t should be distinct from u16
     use_distinct_char16_t: bool,
+    
+    /// Emit vtable functions.
+    vtable_generation: bool,
 }
 
 /// TODO(emilio): This is sort of a lie (see the error message that results from
@@ -2060,6 +2094,7 @@ impl BindgenOptions {
             &mut self.allowlisted_vars,
             &mut self.allowlisted_types,
             &mut self.allowlisted_functions,
+            &mut self.allowlisted_files,
             &mut self.blocklisted_types,
             &mut self.blocklisted_functions,
             &mut self.blocklisted_items,
@@ -2118,6 +2153,7 @@ impl Default for BindgenOptions {
             allowlisted_types: Default::default(),
             allowlisted_functions: Default::default(),
             allowlisted_vars: Default::default(),
+            allowlisted_files: Default::default(),
             default_enum_style: Default::default(),
             bitfield_enums: Default::default(),
             newtype_enums: Default::default(),
@@ -2196,6 +2232,7 @@ impl Default for BindgenOptions {
             cpp_semantic_attributes: false,
             represent_cxx_operators: false,
             use_distinct_char16_t: false,
+            vtable_generation: false,
         }
     }
 }
@@ -2225,6 +2262,41 @@ fn ensure_libclang_is_loaded() {
 
 #[cfg(not(feature = "runtime"))]
 fn ensure_libclang_is_loaded() {}
+
+/// Error type for rust-bindgen.
+#[derive(Debug, Clone, PartialEq, Eq, Hash)]
+#[non_exhaustive]
+pub enum BindgenError {
+    /// The header was a folder.
+    FolderAsHeader(PathBuf),
+    /// Permissions to read the header is insufficient.
+    InsufficientPermissions(PathBuf),
+    /// The header does not exist.
+    NotExist(PathBuf),
+    /// Clang diagnosed an error.
+    ClangDiagnostic(String),
+}
+
+impl std::fmt::Display for BindgenError {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            BindgenError::FolderAsHeader(h) => {
+                write!(f, "'{}' is a folder", h.display())
+            }
+            BindgenError::InsufficientPermissions(h) => {
+                write!(f, "insufficient permissions to read '{}'", h.display())
+            }
+            BindgenError::NotExist(h) => {
+                write!(f, "header '{}' does not exist.", h.display())
+            }
+            BindgenError::ClangDiagnostic(message) => {
+                write!(f, "clang diagnosed error: {}", message)
+            }
+        }
+    }
+}
+
+impl std::error::Error for BindgenError {}
 
 /// Generated Rust bindings.
 #[derive(Debug)]
@@ -2282,7 +2354,7 @@ impl Bindings {
     /// Generate bindings for the given options.
     pub(crate) fn generate(
         mut options: BindgenOptions,
-    ) -> Result<Bindings, ()> {
+    ) -> Result<Bindings, BindgenError> {
         ensure_libclang_is_loaded();
 
         #[cfg(feature = "runtime")]
@@ -2400,22 +2472,19 @@ impl Bindings {
         }
 
         if let Some(h) = options.input_header.as_ref() {
-            if let Ok(md) = std::fs::metadata(h) {
+            let path = Path::new(h);
+            if let Ok(md) = std::fs::metadata(path) {
                 if md.is_dir() {
-                    eprintln!("error: '{}' is a folder", h);
-                    return Err(());
+                    return Err(BindgenError::FolderAsHeader(path.into()));
                 }
                 if !can_read(&md.permissions()) {
-                    eprintln!(
-                        "error: insufficient permissions to read '{}'",
-                        h
-                    );
-                    return Err(());
+                    return Err(BindgenError::InsufficientPermissions(
+                        path.into(),
+                    ));
                 }
                 options.clang_args.push(h.clone())
             } else {
-                eprintln!("error: header '{}' does not exist.", h);
-                return Err(());
+                return Err(BindgenError::NotExist(path.into()));
             }
         }
 
@@ -2636,19 +2705,24 @@ fn parse_one(
 }
 
 /// Parse the Clang AST into our `Item` internal representation.
-fn parse(context: &mut BindgenContext) -> Result<(), ()> {
+fn parse(context: &mut BindgenContext) -> Result<(), BindgenError> {
     use clang_sys::*;
 
-    let mut any_error = false;
+    let mut error = None;
     for d in context.translation_unit().diags().iter() {
         let msg = d.format();
         let is_err = d.severity() >= CXDiagnostic_Error;
-        eprintln!("{}, err: {}", msg, is_err);
-        any_error |= is_err;
+        if is_err {
+            let error = error.get_or_insert_with(String::new);
+            error.push_str(&msg);
+            error.push('\n');
+        } else {
+            eprintln!("clang diag: {}", msg);
+        }
     }
 
-    if any_error {
-        return Err(());
+    if let Some(message) = error {
+        return Err(BindgenError::ClangDiagnostic(message));
     }
 
     let cursor = context.translation_unit().cursor();
@@ -2720,7 +2794,7 @@ fn get_target_dependent_env_var(var: &str) -> Option<String> {
             return Some(v);
         }
         if let Ok(v) =
-            env::var(&format!("{}_{}", var, target.replace("-", "_")))
+            env::var(&format!("{}_{}", var, target.replace('-', "_")))
         {
             return Some(v);
         }

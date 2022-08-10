@@ -22,11 +22,18 @@ fn bindgen_test_layout_X() {
         4usize,
         concat!("Alignment of ", stringify!(X))
     );
-    assert_eq!(
-        unsafe { &(*(::std::ptr::null::<X>()))._x as *const _ as usize },
-        0usize,
-        concat!("Offset of field: ", stringify!(X), "::", stringify!(_x))
-    );
+    fn test_field__x() {
+        assert_eq!(
+            unsafe {
+                let uninit = ::std::mem::MaybeUninit::<X>::uninit();
+                let ptr = uninit.as_ptr();
+                ::std::ptr::addr_of!((*ptr)._x) as usize - ptr as usize
+            },
+            0usize,
+            concat!("Offset of field: ", stringify!(X), "::", stringify!(_x))
+        );
+    }
+    test_field__x();
 }
 extern "C" {
     #[bindgen_original_name("some_function")]

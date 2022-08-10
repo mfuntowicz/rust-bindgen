@@ -31,45 +31,60 @@ fn bindgen_test_layout_color__bindgen_ty_1() {
         1usize,
         concat!("Alignment of ", stringify!(color__bindgen_ty_1))
     );
-    assert_eq!(
-        unsafe {
-            &(*(::std::ptr::null::<color__bindgen_ty_1>())).r as *const _
-                as usize
-        },
-        0usize,
-        concat!(
-            "Offset of field: ",
-            stringify!(color__bindgen_ty_1),
-            "::",
-            stringify!(r)
-        )
-    );
-    assert_eq!(
-        unsafe {
-            &(*(::std::ptr::null::<color__bindgen_ty_1>())).g as *const _
-                as usize
-        },
-        1usize,
-        concat!(
-            "Offset of field: ",
-            stringify!(color__bindgen_ty_1),
-            "::",
-            stringify!(g)
-        )
-    );
-    assert_eq!(
-        unsafe {
-            &(*(::std::ptr::null::<color__bindgen_ty_1>())).b as *const _
-                as usize
-        },
-        2usize,
-        concat!(
-            "Offset of field: ",
-            stringify!(color__bindgen_ty_1),
-            "::",
-            stringify!(b)
-        )
-    );
+    fn test_field_r() {
+        assert_eq!(
+            unsafe {
+                let uninit =
+                    ::std::mem::MaybeUninit::<color__bindgen_ty_1>::uninit();
+                let ptr = uninit.as_ptr();
+                ::std::ptr::addr_of!((*ptr).r) as usize - ptr as usize
+            },
+            0usize,
+            concat!(
+                "Offset of field: ",
+                stringify!(color__bindgen_ty_1),
+                "::",
+                stringify!(r)
+            )
+        );
+    }
+    test_field_r();
+    fn test_field_g() {
+        assert_eq!(
+            unsafe {
+                let uninit =
+                    ::std::mem::MaybeUninit::<color__bindgen_ty_1>::uninit();
+                let ptr = uninit.as_ptr();
+                ::std::ptr::addr_of!((*ptr).g) as usize - ptr as usize
+            },
+            1usize,
+            concat!(
+                "Offset of field: ",
+                stringify!(color__bindgen_ty_1),
+                "::",
+                stringify!(g)
+            )
+        );
+    }
+    test_field_g();
+    fn test_field_b() {
+        assert_eq!(
+            unsafe {
+                let uninit =
+                    ::std::mem::MaybeUninit::<color__bindgen_ty_1>::uninit();
+                let ptr = uninit.as_ptr();
+                ::std::ptr::addr_of!((*ptr).b) as usize - ptr as usize
+            },
+            2usize,
+            concat!(
+                "Offset of field: ",
+                stringify!(color__bindgen_ty_1),
+                "::",
+                stringify!(b)
+            )
+        );
+    }
+    test_field_b();
 }
 #[repr(C)]
 #[derive(Debug, Default, Copy, Clone)]
@@ -90,45 +105,60 @@ fn bindgen_test_layout_color__bindgen_ty_2() {
         1usize,
         concat!("Alignment of ", stringify!(color__bindgen_ty_2))
     );
-    assert_eq!(
-        unsafe {
-            &(*(::std::ptr::null::<color__bindgen_ty_2>())).y as *const _
-                as usize
-        },
-        0usize,
-        concat!(
-            "Offset of field: ",
-            stringify!(color__bindgen_ty_2),
-            "::",
-            stringify!(y)
-        )
-    );
-    assert_eq!(
-        unsafe {
-            &(*(::std::ptr::null::<color__bindgen_ty_2>())).u as *const _
-                as usize
-        },
-        1usize,
-        concat!(
-            "Offset of field: ",
-            stringify!(color__bindgen_ty_2),
-            "::",
-            stringify!(u)
-        )
-    );
-    assert_eq!(
-        unsafe {
-            &(*(::std::ptr::null::<color__bindgen_ty_2>())).v as *const _
-                as usize
-        },
-        2usize,
-        concat!(
-            "Offset of field: ",
-            stringify!(color__bindgen_ty_2),
-            "::",
-            stringify!(v)
-        )
-    );
+    fn test_field_y() {
+        assert_eq!(
+            unsafe {
+                let uninit =
+                    ::std::mem::MaybeUninit::<color__bindgen_ty_2>::uninit();
+                let ptr = uninit.as_ptr();
+                ::std::ptr::addr_of!((*ptr).y) as usize - ptr as usize
+            },
+            0usize,
+            concat!(
+                "Offset of field: ",
+                stringify!(color__bindgen_ty_2),
+                "::",
+                stringify!(y)
+            )
+        );
+    }
+    test_field_y();
+    fn test_field_u() {
+        assert_eq!(
+            unsafe {
+                let uninit =
+                    ::std::mem::MaybeUninit::<color__bindgen_ty_2>::uninit();
+                let ptr = uninit.as_ptr();
+                ::std::ptr::addr_of!((*ptr).u) as usize - ptr as usize
+            },
+            1usize,
+            concat!(
+                "Offset of field: ",
+                stringify!(color__bindgen_ty_2),
+                "::",
+                stringify!(u)
+            )
+        );
+    }
+    test_field_u();
+    fn test_field_v() {
+        assert_eq!(
+            unsafe {
+                let uninit =
+                    ::std::mem::MaybeUninit::<color__bindgen_ty_2>::uninit();
+                let ptr = uninit.as_ptr();
+                ::std::ptr::addr_of!((*ptr).v) as usize - ptr as usize
+            },
+            2usize,
+            concat!(
+                "Offset of field: ",
+                stringify!(color__bindgen_ty_2),
+                "::",
+                stringify!(v)
+            )
+        );
+    }
+    test_field_v();
 }
 #[test]
 fn bindgen_test_layout_color() {
@@ -142,11 +172,23 @@ fn bindgen_test_layout_color() {
         1usize,
         concat!("Alignment of ", stringify!(color))
     );
-    assert_eq!(
-        unsafe { &(*(::std::ptr::null::<color>())).v3 as *const _ as usize },
-        0usize,
-        concat!("Offset of field: ", stringify!(color), "::", stringify!(v3))
-    );
+    fn test_field_v3() {
+        assert_eq!(
+            unsafe {
+                let uninit = ::std::mem::MaybeUninit::<color>::uninit();
+                let ptr = uninit.as_ptr();
+                ::std::ptr::addr_of!((*ptr).v3) as usize - ptr as usize
+            },
+            0usize,
+            concat!(
+                "Offset of field: ",
+                stringify!(color),
+                "::",
+                stringify!(v3)
+            )
+        );
+    }
+    test_field_v3();
 }
 impl Default for color {
     fn default() -> Self {

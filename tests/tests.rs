@@ -115,6 +115,62 @@ The latest `rustfmt` is required to run the `bindgen` test suite. Install
     (bindings, stderr)
 }
 
+fn should_overwrite_expected() -> bool {
+    if let Some(var) = env::var_os("BINDGEN_OVERWRITE_EXPECTED") {
+        if var == "1" {
+            return true;
+        }
+        if var != "0" && var != "" {
+            panic!("Invalid value of BINDGEN_OVERWRITE_EXPECTED");
+        }
+    }
+    false
+}
+
+fn error_diff_mismatch(
+    actual: &str,
+    expected: &str,
+    header: Option<&Path>,
+    filename: &Path,
+) -> Result<(), Error> {
+    println!("diff expected generated");
+    println!("--- expected: {:?}", filename);
+    if let Some(header) = header {
+        println!("+++ generated from: {:?}", header);
+    }
+
+    for diff in diff::lines(&expected, &actual) {
+        match diff {
+            diff::Result::Left(l) => println!("-{}", l),
+            diff::Result::Both(l, _) => println!(" {}", l),
+            diff::Result::Right(r) => println!("+{}", r),
+        }
+    }
+
+    if should_overwrite_expected() {
+        // Overwrite the expectation with actual output.
+        let mut expectation_file = fs::File::create(filename)?;
+        expectation_file.write_all(actual.as_bytes())?;
+    }
+
+    if let Some(var) = env::var_os("BINDGEN_TESTS_DIFFTOOL") {
+        //usecase: var = "meld" -> You can hand check differences
+        let name = match filename.components().last() {
+            Some(std::path::Component::Normal(name)) => name,
+            _ => panic!("Why is the header variable so weird?"),
+        };
+        let actual_result_path =
+            PathBuf::from(env::var("OUT_DIR").unwrap()).join(name);
+        let mut actual_result_file = fs::File::create(&actual_result_path)?;
+        actual_result_file.write_all(actual.as_bytes())?;
+        std::process::Command::new(var)
+            .args(&[filename, &actual_result_path])
+            .output()?;
+    }
+
+    return Err(Error::new(ErrorKind::Other, "Header and binding differ! Run with BINDGEN_OVERWRITE_EXPECTED=1 in the environment to automatically overwrite the expectation or with BINDGEN_TESTS_DIFFTOOL=meld to do this manually."));
+}
+
 fn compare_generated_header(
     header: &Path,
     builder: BuilderState,
@@ -141,10 +197,6 @@ fn compare_generated_header(
             expectation.push("libclang-9");
         } else if cfg!(feature = "testing_only_libclang_5") {
             expectation.push("libclang-5");
-        } else if cfg!(feature = "testing_only_libclang_4") {
-            expectation.push("libclang-4");
-        } else if cfg!(feature = "testing_only_libclang_3_9") {
-            expectation.push("libclang-3.9");
         } else {
             match clang_version().parsed {
                 None => expectation.push("libclang-9"),
@@ -199,7 +251,7 @@ fn compare_generated_header(
             let actual = bindings.to_string();
             rustfmt(actual)
         }
-        Err(()) => ("<error generating bindings>".to_string(), "".to_string()),
+        Err(_) => ("<error generating bindings>".to_string(), "".to_string()),
     };
     println!("{}", rustfmt_stderr);
 
@@ -215,46 +267,12 @@ fn compare_generated_header(
 
     if actual != expected {
         println!("{}", rustfmt_stderr);
-
-        println!("diff expected generated");
-        println!("--- expected: {:?}", looked_at.last().unwrap());
-        println!("+++ generated from: {:?}", header);
-
-        for diff in diff::lines(&expected, &actual) {
-            match diff {
-                diff::Result::Left(l) => println!("-{}", l),
-                diff::Result::Both(l, _) => println!(" {}", l),
-                diff::Result::Right(r) => println!("+{}", r),
-            }
-        }
-
-        if let Some(var) = env::var_os("BINDGEN_OVERWRITE_EXPECTED") {
-            if var == "1" {
-                // Overwrite the expectation with actual output.
-                let mut expectation_file =
-                    fs::File::create(looked_at.last().unwrap())?;
-                expectation_file.write_all(actual.as_bytes())?;
-            } else if var != "0" && var != "" {
-                panic!("Invalid value of BINDGEN_OVERWRITE_EXPECTED");
-            }
-        }
-
-        if let Some(var) = env::var_os("BINDGEN_TESTS_DIFFTOOL") {
-            //usecase: var = "meld" -> You can hand check differences
-            let filename = match header.components().last() {
-                Some(std::path::Component::Normal(name)) => name,
-                _ => panic!("Why is the header variable so weird?"),
-            };
-            let actual_result_path =
-                PathBuf::from(env::var("OUT_DIR").unwrap()).join(filename);
-            let mut actual_result_file = fs::File::create(&actual_result_path)?;
-            actual_result_file.write_all(actual.as_bytes())?;
-            std::process::Command::new(var)
-                .args(&[looked_at.last().unwrap(), &actual_result_path])
-                .output()?;
-        }
-
-        return Err(Error::new(ErrorKind::Other, "Header and binding differ! Run with BINDGEN_OVERWRITE_EXPECTED=1 in the environment to automatically overwrite the expectation or with BINDGEN_TESTS_DIFFTOOL=meld to do this manually."));
+        return error_diff_mismatch(
+            &actual,
+            &expected,
+            Some(header),
+            looked_at.last().unwrap(),
+        );
     }
 
     if let Some(roundtrip_builder) = roundtrip_builder {
@@ -367,6 +385,7 @@ fn create_bindgen_builder(header: &Path) -> Result<BuilderState, Error> {
         "--no-rustfmt-bindings",
         "--with-derive-default",
         "--disable-header-comment",
+        "--vtable-generation",
         header_str,
         "--raw-line",
         "",
@@ -413,6 +432,7 @@ macro_rules! test_header {
 include!(concat!(env!("OUT_DIR"), "/tests.rs"));
 
 #[test]
+#[cfg_attr(target_os = "windows", ignore)]
 fn test_clang_env_args() {
     std::env::set_var(
         "BINDGEN_EXTRA_CLANG_ARGS",
@@ -487,6 +507,10 @@ fn test_multiple_header_calls_in_builder() {
     let (actual, stderr) = rustfmt(actual);
     println!("{}", stderr);
 
+    let expected_filename = concat!(
+        env!("CARGO_MANIFEST_DIR"),
+        "/tests/expectations/tests/test_multiple_header_calls_in_builder.rs"
+    );
     let expected = include_str!(concat!(
         env!("CARGO_MANIFEST_DIR"),
         "/tests/expectations/tests/test_multiple_header_calls_in_builder.rs"
@@ -495,16 +519,13 @@ fn test_multiple_header_calls_in_builder() {
 
     if actual != expected {
         println!("Generated bindings differ from expected!");
-
-        for diff in diff::lines(&actual, &expected) {
-            match diff {
-                diff::Result::Left(l) => println!("-{}", l),
-                diff::Result::Both(l, _) => println!(" {}", l),
-                diff::Result::Right(r) => println!("+{}", r),
-            }
-        }
-
-        panic!();
+        error_diff_mismatch(
+            &actual,
+            &expected,
+            None,
+            Path::new(expected_filename),
+        )
+        .unwrap();
     }
 }
 
@@ -553,13 +574,24 @@ fn test_mixed_header_and_header_contents() {
     let (actual, stderr) = rustfmt(actual);
     println!("{}", stderr);
 
+    let expected_filename = concat!(
+        env!("CARGO_MANIFEST_DIR"),
+        "/tests/expectations/tests/test_mixed_header_and_header_contents.rs"
+    );
     let expected = include_str!(concat!(
         env!("CARGO_MANIFEST_DIR"),
         "/tests/expectations/tests/test_mixed_header_and_header_contents.rs"
     ));
     let (expected, _) = rustfmt(expected.to_string());
-
-    assert_eq!(expected, actual);
+    if expected != actual {
+        error_diff_mismatch(
+            &actual,
+            &expected,
+            None,
+            Path::new(expected_filename),
+        )
+        .unwrap();
+    }
 }
 
 #[test]
