@@ -506,9 +506,9 @@ impl FunctionSig {
             let is_const = is_method && cursor.method_is_const();
             let is_virtual = is_method && cursor.method_is_virtual();
             let is_static = is_method && cursor.method_is_static();
-            if !is_static
-                && (!is_virtual
-                    || ctx.options().use_specific_virtual_function_receiver)
+            if !is_static &&
+                (!is_virtual ||
+                    ctx.options().use_specific_virtual_function_receiver)
             {
                 let parent = cursor.semantic_parent();
                 let class = Item::parse(parent, None, ctx)
@@ -684,12 +684,12 @@ impl ClangSubItemParser for Function {
             if context.options().represent_cxx_operators {
                 let (new_suffix, special_member) = match operator_suffix {
                     "=" => ("equals", SpecialMemberKind::AssignmentOperator),
-                    _ => return Err(ParseError::Continue)
+                    _ => return Err(ParseError::Continue),
                 };
                 name = format!("operator_{}", new_suffix);
                 Some(special_member)
             } else {
-                return Err(ParseError::Continue)
+                return Err(ParseError::Continue);
             }
         } else {
             None

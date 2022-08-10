@@ -592,20 +592,17 @@ impl Builder {
         }
 
         if self.options.cpp_semantic_attributes {
-            output_vector
-                .push("--cpp-semantic-attributes".into());
+            output_vector.push("--cpp-semantic-attributes".into());
         }
 
         if self.options.represent_cxx_operators {
-            output_vector
-                .push("--represent-cxx-operators".into());
+            output_vector.push("--represent-cxx-operators".into());
         }
 
         if self.options.use_distinct_char16_t {
-            output_vector
-                .push("--use-distinct-char16-t".into());
+            output_vector.push("--use-distinct-char16-t".into());
         }
-        
+
         if self.options.vtable_generation {
             output_vector.push("--vtable-generation".into());
         }
@@ -1525,7 +1522,7 @@ impl Builder {
         self.options.use_distinct_char16_t = doit;
         self
     }
-    
+
     /// If true, enables experimental support to generate vtable functions.
     ///
     /// Should mostly work, though some edge cases are likely to be broken.
@@ -2078,7 +2075,7 @@ struct BindgenOptions {
 
     /// Whether char16_t should be distinct from u16
     use_distinct_char16_t: bool,
-    
+
     /// Emit vtable functions.
     vtable_generation: bool,
 }

@@ -1051,7 +1051,7 @@ where
     if matches.is_present("use-distinct-char16-t") {
         builder = builder.use_distinct_char16_t(true);
     }
-    
+
     if matches.is_present("vtable-generation") {
         builder = builder.vtable_generation(true);
     }
