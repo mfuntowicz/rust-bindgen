@@ -6,7 +6,12 @@
 )]
 
 #[repr(C)]
-pub struct C__bindgen_vtable(::std::os::raw::c_void);
+pub struct C__bindgen_vtable {
+    pub C_do_thing:
+        unsafe extern "C" fn(this: *mut C, arg1: ::std::os::raw::c_char),
+    pub C_do_thing1:
+        unsafe extern "C" fn(this: *mut C, arg1: ::std::os::raw::c_int),
+}
 #[repr(C)]
 #[derive(Debug, Copy, Clone)]
 pub struct C {

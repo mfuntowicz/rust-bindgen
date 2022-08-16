@@ -61,19 +61,23 @@ fn bindgen_test_layout_rte_ring_prod() {
         4usize,
         concat!("Alignment of ", stringify!(rte_ring_prod))
     );
-    assert_eq!(
-        unsafe {
-            &(*(::std::ptr::null::<rte_ring_prod>())).watermark as *const _
-                as usize
-        },
-        0usize,
-        concat!(
-            "Offset of field: ",
-            stringify!(rte_ring_prod),
-            "::",
-            stringify!(watermark)
-        )
-    );
+    fn test_field_watermark() {
+        assert_eq!(
+            unsafe {
+                let uninit = ::std::mem::MaybeUninit::<rte_ring_prod>::uninit();
+                let ptr = uninit.as_ptr();
+                ::std::ptr::addr_of!((*ptr).watermark) as usize - ptr as usize
+            },
+            0usize,
+            concat!(
+                "Offset of field: ",
+                stringify!(rte_ring_prod),
+                "::",
+                stringify!(watermark)
+            )
+        );
+    }
+    test_field_watermark();
 }
 #[repr(C)]
 #[derive(Debug, Default, Copy, Clone)]
@@ -93,19 +97,23 @@ fn bindgen_test_layout_rte_ring_cons() {
         4usize,
         concat!("Alignment of ", stringify!(rte_ring_cons))
     );
-    assert_eq!(
-        unsafe {
-            &(*(::std::ptr::null::<rte_ring_cons>())).sc_dequeue as *const _
-                as usize
-        },
-        0usize,
-        concat!(
-            "Offset of field: ",
-            stringify!(rte_ring_cons),
-            "::",
-            stringify!(sc_dequeue)
-        )
-    );
+    fn test_field_sc_dequeue() {
+        assert_eq!(
+            unsafe {
+                let uninit = ::std::mem::MaybeUninit::<rte_ring_cons>::uninit();
+                let ptr = uninit.as_ptr();
+                ::std::ptr::addr_of!((*ptr).sc_dequeue) as usize - ptr as usize
+            },
+            0usize,
+            concat!(
+                "Offset of field: ",
+                stringify!(rte_ring_cons),
+                "::",
+                stringify!(sc_dequeue)
+            )
+        );
+    }
+    test_field_sc_dequeue();
 }
 #[test]
 fn bindgen_test_layout_rte_ring() {
@@ -119,54 +127,74 @@ fn bindgen_test_layout_rte_ring() {
         8usize,
         concat!("Alignment of ", stringify!(rte_ring))
     );
-    assert_eq!(
-        unsafe {
-            &(*(::std::ptr::null::<rte_ring>())).memzone as *const _ as usize
-        },
-        0usize,
-        concat!(
-            "Offset of field: ",
-            stringify!(rte_ring),
-            "::",
-            stringify!(memzone)
-        )
-    );
-    assert_eq!(
-        unsafe {
-            &(*(::std::ptr::null::<rte_ring>())).prod as *const _ as usize
-        },
-        8usize,
-        concat!(
-            "Offset of field: ",
-            stringify!(rte_ring),
-            "::",
-            stringify!(prod)
-        )
-    );
-    assert_eq!(
-        unsafe {
-            &(*(::std::ptr::null::<rte_ring>())).cons as *const _ as usize
-        },
-        12usize,
-        concat!(
-            "Offset of field: ",
-            stringify!(rte_ring),
-            "::",
-            stringify!(cons)
-        )
-    );
-    assert_eq!(
-        unsafe {
-            &(*(::std::ptr::null::<rte_ring>())).ring as *const _ as usize
-        },
-        16usize,
-        concat!(
-            "Offset of field: ",
-            stringify!(rte_ring),
-            "::",
-            stringify!(ring)
-        )
-    );
+    fn test_field_memzone() {
+        assert_eq!(
+            unsafe {
+                let uninit = ::std::mem::MaybeUninit::<rte_ring>::uninit();
+                let ptr = uninit.as_ptr();
+                ::std::ptr::addr_of!((*ptr).memzone) as usize - ptr as usize
+            },
+            0usize,
+            concat!(
+                "Offset of field: ",
+                stringify!(rte_ring),
+                "::",
+                stringify!(memzone)
+            )
+        );
+    }
+    test_field_memzone();
+    fn test_field_prod() {
+        assert_eq!(
+            unsafe {
+                let uninit = ::std::mem::MaybeUninit::<rte_ring>::uninit();
+                let ptr = uninit.as_ptr();
+                ::std::ptr::addr_of!((*ptr).prod) as usize - ptr as usize
+            },
+            8usize,
+            concat!(
+                "Offset of field: ",
+                stringify!(rte_ring),
+                "::",
+                stringify!(prod)
+            )
+        );
+    }
+    test_field_prod();
+    fn test_field_cons() {
+        assert_eq!(
+            unsafe {
+                let uninit = ::std::mem::MaybeUninit::<rte_ring>::uninit();
+                let ptr = uninit.as_ptr();
+                ::std::ptr::addr_of!((*ptr).cons) as usize - ptr as usize
+            },
+            12usize,
+            concat!(
+                "Offset of field: ",
+                stringify!(rte_ring),
+                "::",
+                stringify!(cons)
+            )
+        );
+    }
+    test_field_cons();
+    fn test_field_ring() {
+        assert_eq!(
+            unsafe {
+                let uninit = ::std::mem::MaybeUninit::<rte_ring>::uninit();
+                let ptr = uninit.as_ptr();
+                ::std::ptr::addr_of!((*ptr).ring) as usize - ptr as usize
+            },
+            16usize,
+            concat!(
+                "Offset of field: ",
+                stringify!(rte_ring),
+                "::",
+                stringify!(ring)
+            )
+        );
+    }
+    test_field_ring();
 }
 impl Default for rte_ring {
     fn default() -> Self {

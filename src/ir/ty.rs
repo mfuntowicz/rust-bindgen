@@ -1107,8 +1107,10 @@ impl Type {
                     }
                 }
                 CXType_Enum => {
-                    let visibility = Visibility::from(cursor.access_specifier());
-                    let enum_ = Enum::from_ty(ty, visibility, ctx).expect("Not an enum?");
+                    let visibility =
+                        Visibility::from(cursor.access_specifier());
+                    let enum_ = Enum::from_ty(ty, visibility, ctx)
+                        .expect("Not an enum?");
 
                     if name.is_empty() {
                         let pretty_name = ty.spelling();

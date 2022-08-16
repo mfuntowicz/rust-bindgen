@@ -121,17 +121,21 @@ fn bindgen_test_layout_Allowlisted() {
         1usize,
         concat!("Alignment of ", stringify!(Allowlisted))
     );
-    assert_eq!(
-        unsafe {
-            &(*(::std::ptr::null::<Allowlisted>())).some_member as *const _
-                as usize
-        },
-        0usize,
-        concat!(
-            "Offset of field: ",
-            stringify!(Allowlisted),
-            "::",
-            stringify!(some_member)
-        )
-    );
+    fn test_field_some_member() {
+        assert_eq!(
+            unsafe {
+                let uninit = ::std::mem::MaybeUninit::<Allowlisted>::uninit();
+                let ptr = uninit.as_ptr();
+                ::std::ptr::addr_of!((*ptr).some_member) as usize - ptr as usize
+            },
+            0usize,
+            concat!(
+                "Offset of field: ",
+                stringify!(Allowlisted),
+                "::",
+                stringify!(some_member)
+            )
+        );
+    }
+    test_field_some_member();
 }

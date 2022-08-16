@@ -4,6 +4,7 @@
     non_camel_case_types,
     non_upper_case_globals
 )]
+#![cfg(not(target_os = "windows"))]
 
 pub const Foo_Bar: Foo = 0;
 pub const Foo_Qux: Foo = 1;
@@ -25,6 +26,6 @@ pub type BoolEnumsAreFun = bool;
 pub type MyType = bool;
 pub const BoolEnumsAreFun2_Value2: BoolEnumsAreFun2 = true;
 pub type BoolEnumsAreFun2 = MyType;
-pub const AnonymousVariantOne: ::std::os::raw::c_uchar = 0;
-pub const AnonymousVariantTwo: ::std::os::raw::c_uchar = 1;
+pub const AnonymousVariantOne: _bindgen_ty_1 = 0;
+pub const AnonymousVariantTwo: _bindgen_ty_1 = 1;
 pub type _bindgen_ty_1 = ::std::os::raw::c_uchar;

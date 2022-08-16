@@ -6,12 +6,11 @@
 )]
 #![cfg(target_os = "macos")]
 
-#[macro_use]
-extern crate objc;
+use objc::{self, class, msg_send, sel, sel_impl};
 #[allow(non_camel_case_types)]
 pub type id = *mut objc::runtime::Object;
 #[repr(transparent)]
-#[derive(Clone)]
+#[derive(Debug, Copy, Clone)]
 pub struct Foo(pub id);
 impl std::ops::Deref for Foo {
     type Target = objc::runtime::Object;
@@ -22,7 +21,7 @@ impl std::ops::Deref for Foo {
 unsafe impl objc::Message for Foo {}
 impl Foo {
     pub fn alloc() -> Self {
-        Self(unsafe { msg_send!(objc::class!(Foo), alloc) })
+        Self(unsafe { msg_send!(class!(Foo), alloc) })
     }
 }
 impl IFoo for Foo {}
@@ -44,18 +43,23 @@ fn bindgen_test_layout_FooStruct() {
         8usize,
         concat!("Alignment of ", stringify!(FooStruct))
     );
-    assert_eq!(
-        unsafe {
-            &(*(::std::ptr::null::<FooStruct>())).foo as *const _ as usize
-        },
-        0usize,
-        concat!(
-            "Offset of field: ",
-            stringify!(FooStruct),
-            "::",
-            stringify!(foo)
-        )
-    );
+    fn test_field_foo() {
+        assert_eq!(
+            unsafe {
+                let uninit = ::std::mem::MaybeUninit::<FooStruct>::uninit();
+                let ptr = uninit.as_ptr();
+                ::std::ptr::addr_of!((*ptr).foo) as usize - ptr as usize
+            },
+            0usize,
+            concat!(
+                "Offset of field: ",
+                stringify!(FooStruct),
+                "::",
+                stringify!(foo)
+            )
+        );
+    }
+    test_field_foo();
 }
 impl Default for FooStruct {
     fn default() -> Self {

@@ -2,8 +2,8 @@
 
 use crate::ir::comp::SpecialMemberKind;
 use crate::ir::function::Visibility;
-use crate::{ir::context::BindgenContext, BindgenOptions};
 use crate::ir::layout::Layout;
+use crate::{ir::context::BindgenContext, BindgenOptions};
 use proc_macro2::{Ident, Span, TokenStream};
 use quote::TokenStreamExt;
 
@@ -32,7 +32,7 @@ pub mod attributes {
         let which_ones = which_ones
             .iter()
             .cloned()
-            .map(|one| Ident::new(one, Span::call_site()));
+            .map(|one| TokenStream::from_str(one).expect("derive to be valid"));
         quote! {
             #[derive( #( #which_ones ),* )]
         }
@@ -72,18 +72,15 @@ pub mod attributes {
     }
 }
 
-
 pub trait CppSemanticAttributeCreator {
     fn do_add(&mut self, ts: TokenStream);
     fn is_enabled(&self) -> bool;
 
     fn add(&mut self, tokens: TokenStream) {
         if self.is_enabled() {
-            self.do_add(
-                quote! {
-                    #[cpp_semantics(#tokens)]
-                }
-            )
+            self.do_add(quote! {
+                #[cpp_semantics(#tokens)]
+            })
         }
     }
 
@@ -135,7 +132,7 @@ pub trait CppSemanticAttributeCreator {
         self.add_ident("rvalue_reference")
     }
 
-    fn is_virtual(&mut self, ) {
+    fn is_virtual(&mut self) {
         self.add_ident("bindgen_virtual")
     }
 
@@ -145,7 +142,7 @@ pub trait CppSemanticAttributeCreator {
         })
     }
 
-    fn is_pure_virtual(&mut self, ) {
+    fn is_pure_virtual(&mut self) {
         self.add_ident("pure_virtual")
     }
 
@@ -185,13 +182,17 @@ pub trait CppSemanticAttributeCreator {
 
 pub struct CppSemanticAttributeAdder<'a> {
     enabled: bool,
-    attrs: &'a mut Vec<TokenStream>
+    attrs: &'a mut Vec<TokenStream>,
 }
 
 impl<'a> CppSemanticAttributeAdder<'a> {
-    pub(crate) fn new(opts: &BindgenOptions, attrs: &'a mut Vec<TokenStream>) -> Self {
+    pub(crate) fn new(
+        opts: &BindgenOptions,
+        attrs: &'a mut Vec<TokenStream>,
+    ) -> Self {
         Self {
-            enabled: opts.cpp_semantic_attributes, attrs
+            enabled: opts.cpp_semantic_attributes,
+            attrs,
         }
     }
 }
@@ -206,16 +207,16 @@ impl<'a> CppSemanticAttributeCreator for CppSemanticAttributeAdder<'a> {
     }
 }
 
-
 pub struct CppSemanticAttributeSingle {
     enabled: bool,
-    attr: TokenStream
+    attr: TokenStream,
 }
 
 impl CppSemanticAttributeSingle {
     pub(crate) fn new(opts: &BindgenOptions) -> Self {
         Self {
-            enabled: opts.cpp_semantic_attributes, attr: quote! {}
+            enabled: opts.cpp_semantic_attributes,
+            attr: quote! {},
         }
     }
 
@@ -310,8 +311,8 @@ pub mod ast_ty {
                 }
             }
             None => {
-                if ctx.options().use_core
-                    && ctx.options().rust_features.core_ffi_c_void
+                if ctx.options().use_core &&
+                    ctx.options().rust_features.core_ffi_c_void
                 {
                     quote! { ::core::ffi::c_void }
                 } else {

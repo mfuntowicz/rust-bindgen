@@ -13,7 +13,7 @@ pub struct foo {
 pub const foo_FOO_A: foo__bindgen_ty_1 = foo__bindgen_ty_1::FOO_A;
 pub const foo_FOO_B: foo__bindgen_ty_1 = foo__bindgen_ty_1::FOO_B;
 #[repr(u32)]
-#[derive(Debug, Copy, Clone, Hash, PartialEq, Eq)]
+#[derive(Copy, Clone, Hash, PartialEq, Eq)]
 pub enum foo__bindgen_ty_1 {
     FOO_A = 0,
     FOO_B = 1,
@@ -30,16 +30,23 @@ fn bindgen_test_layout_foo() {
         4usize,
         concat!("Alignment of ", stringify!(foo))
     );
-    assert_eq!(
-        unsafe { &(*(::std::ptr::null::<foo>())).member as *const _ as usize },
-        0usize,
-        concat!(
-            "Offset of field: ",
-            stringify!(foo),
-            "::",
-            stringify!(member)
-        )
-    );
+    fn test_field_member() {
+        assert_eq!(
+            unsafe {
+                let uninit = ::std::mem::MaybeUninit::<foo>::uninit();
+                let ptr = uninit.as_ptr();
+                ::std::ptr::addr_of!((*ptr).member) as usize - ptr as usize
+            },
+            0usize,
+            concat!(
+                "Offset of field: ",
+                stringify!(foo),
+                "::",
+                stringify!(member)
+            )
+        );
+    }
+    test_field_member();
 }
 impl Default for foo {
     fn default() -> Self {
@@ -51,7 +58,7 @@ impl Default for foo {
     }
 }
 #[repr(u32)]
-#[derive(Debug, Copy, Clone, Hash, PartialEq, Eq)]
+#[derive(Copy, Clone, Hash, PartialEq, Eq)]
 pub enum Foo {
     Bar = 0,
     Qux = 1,
@@ -70,7 +77,7 @@ pub enum NoDebug {
 }
 #[repr(u32)]
 /// <div rustbindgen derive="Debug"></div>
-#[derive(Debug, Copy, Clone, Hash, PartialEq, Eq)]
+#[derive(Copy, Clone, Hash, PartialEq, Eq, Debug)]
 pub enum Debug {
     Debug1 = 0,
     Debug2 = 1,

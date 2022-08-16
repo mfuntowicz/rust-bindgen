@@ -22,30 +22,40 @@ fn bindgen_test_layout_UnionWithDtor() {
         8usize,
         concat!("Alignment of ", stringify!(UnionWithDtor))
     );
-    assert_eq!(
-        unsafe {
-            &(*(::std::ptr::null::<UnionWithDtor>())).mFoo as *const _ as usize
-        },
-        0usize,
-        concat!(
-            "Offset of field: ",
-            stringify!(UnionWithDtor),
-            "::",
-            stringify!(mFoo)
-        )
-    );
-    assert_eq!(
-        unsafe {
-            &(*(::std::ptr::null::<UnionWithDtor>())).mBar as *const _ as usize
-        },
-        0usize,
-        concat!(
-            "Offset of field: ",
-            stringify!(UnionWithDtor),
-            "::",
-            stringify!(mBar)
-        )
-    );
+    fn test_field_mFoo() {
+        assert_eq!(
+            unsafe {
+                let uninit = ::std::mem::MaybeUninit::<UnionWithDtor>::uninit();
+                let ptr = uninit.as_ptr();
+                ::std::ptr::addr_of!((*ptr).mFoo) as usize - ptr as usize
+            },
+            0usize,
+            concat!(
+                "Offset of field: ",
+                stringify!(UnionWithDtor),
+                "::",
+                stringify!(mFoo)
+            )
+        );
+    }
+    test_field_mFoo();
+    fn test_field_mBar() {
+        assert_eq!(
+            unsafe {
+                let uninit = ::std::mem::MaybeUninit::<UnionWithDtor>::uninit();
+                let ptr = uninit.as_ptr();
+                ::std::ptr::addr_of!((*ptr).mBar) as usize - ptr as usize
+            },
+            0usize,
+            concat!(
+                "Offset of field: ",
+                stringify!(UnionWithDtor),
+                "::",
+                stringify!(mBar)
+            )
+        );
+    }
+    test_field_mBar();
 }
 extern "C" {
     #[bindgen_original_name("UnionWithDtor_destructor")]

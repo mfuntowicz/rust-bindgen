@@ -41,8 +41,16 @@ pub struct Enum {
 
 impl Enum {
     /// Construct a new `Enum` with the given representation and variants.
-    pub fn new(repr: Option<TypeId>, variants: Vec<EnumVariant>, visibility: Visibility) -> Self {
-        Enum { repr, variants, visibility }
+    pub fn new(
+        repr: Option<TypeId>,
+        variants: Vec<EnumVariant>,
+        visibility: Visibility,
+    ) -> Self {
+        Enum {
+            repr,
+            variants,
+            visibility,
+        }
     }
 
     /// Get this enumeration's representation.

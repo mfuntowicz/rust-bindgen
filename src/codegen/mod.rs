@@ -17,13 +17,16 @@ use self::struct_layout::StructLayoutTracker;
 
 use super::BindgenOptions;
 
-use crate::codegen::helpers::{CppSemanticAttributeAdder, CppSemanticAttributeCreator, CppSemanticAttributeSingle};
+use crate::codegen::helpers::{
+    CppSemanticAttributeAdder, CppSemanticAttributeCreator,
+    CppSemanticAttributeSingle,
+};
 use crate::ir::analysis::{HasVtable, Sizedness};
 use crate::ir::annotations::FieldAccessorKind;
 use crate::ir::comment;
 use crate::ir::comp::{
-    Base, Bitfield, BitfieldUnit, CompInfo, CompKind, Field, FieldData,
-    FieldMethods, Method, MethodKind,
+    Bitfield, BitfieldUnit, CompInfo, CompKind, Field, FieldData, FieldMethods,
+    Method, MethodKind,
 };
 use crate::ir::context::{BindgenContext, ItemId};
 use crate::ir::derive::{
@@ -111,16 +114,12 @@ bitflags! {
     }
 }
 
-fn derives_of_item(item: &Item, ctx: &BindgenContext) -> DerivableTraits {
+fn derives_of_item(
+    item: &Item,
+    ctx: &BindgenContext,
+    packed: bool,
+) -> DerivableTraits {
     let mut derivable_traits = DerivableTraits::empty();
-
-    if item.can_derive_debug(ctx) && !item.annotations().disallow_debug() {
-        derivable_traits |= DerivableTraits::DEBUG;
-    }
-
-    if item.can_derive_default(ctx) && !item.annotations().disallow_default() {
-        derivable_traits |= DerivableTraits::DEFAULT;
-    }
 
     let all_template_params = item.all_template_params(ctx);
 
@@ -138,6 +137,18 @@ fn derives_of_item(item: &Item, ctx: &BindgenContext) -> DerivableTraits {
             // It's not hard to fix though.
             derivable_traits |= DerivableTraits::CLONE;
         }
+    } else if packed {
+        // If the struct or union is packed, deriving from Copy is required for
+        // deriving from any other trait.
+        return derivable_traits;
+    }
+
+    if item.can_derive_debug(ctx) && !item.annotations().disallow_debug() {
+        derivable_traits |= DerivableTraits::DEBUG;
+    }
+
+    if item.can_derive_default(ctx) && !item.annotations().disallow_default() {
+        derivable_traits |= DerivableTraits::DEFAULT;
     }
 
     if item.can_derive_hash(ctx) {
@@ -890,7 +901,8 @@ impl CodeGenerator for Type {
                 } else {
                     quote! {}
                 };
-                let mut semantic_annotations = CppSemanticAttributeSingle::new(ctx.options());
+                let mut semantic_annotations =
+                    CppSemanticAttributeSingle::new(ctx.options());
                 // We are handling (essentially) type X = Y;
                 // We want to denote only if X has unused template params, e.g.
                 // type X<A> = Y;
@@ -936,7 +948,11 @@ impl CodeGenerator for Type {
                 let mut attributes = Vec::new();
                 if let Some(original_name) = item.original_name(ctx) {
                     if name != original_name {
-                        let mut semantic_annotations = CppSemanticAttributeAdder::new(ctx.options(), &mut attributes);
+                        let mut semantic_annotations =
+                            CppSemanticAttributeAdder::new(
+                                ctx.options(),
+                                &mut attributes,
+                            );
                         semantic_annotations.original_name(&original_name);
                     }
                 }
@@ -953,8 +969,11 @@ impl CodeGenerator for Type {
                             alias_style
                         );
 
-                        attributes.push(attributes::repr("transparent"));
-                        let derivable_traits = derives_of_item(item, ctx);
+                        let mut attributes =
+                            vec![attributes::repr("transparent")];
+                        let packed = false; // Types can't be packed in Rust.
+                        let derivable_traits =
+                            derives_of_item(item, ctx, packed);
                         if !derivable_traits.is_empty() {
                             let derives: Vec<_> = derivable_traits.into();
                             attributes.push(attributes::derives(&derives))
@@ -1045,23 +1064,14 @@ impl CodeGenerator for Type {
 
 struct Vtable<'a> {
     item_id: ItemId,
+    /// A reference to the originating compound object.
     #[allow(dead_code)]
-    methods: &'a [Method],
-    #[allow(dead_code)]
-    base_classes: &'a [Base],
+    comp_info: &'a CompInfo,
 }
 
 impl<'a> Vtable<'a> {
-    fn new(
-        item_id: ItemId,
-        methods: &'a [Method],
-        base_classes: &'a [Base],
-    ) -> Self {
-        Vtable {
-            item_id,
-            methods,
-            base_classes,
-        }
+    fn new(item_id: ItemId, comp_info: &'a CompInfo) -> Self {
+        Vtable { item_id, comp_info }
     }
 }
 
@@ -1077,15 +1087,69 @@ impl<'a> CodeGenerator for Vtable<'a> {
     ) {
         assert_eq!(item.id(), self.item_id);
         debug_assert!(item.is_enabled_for_codegen(ctx));
-
-        // For now, generate an empty struct, later we should generate function
-        // pointers and whatnot.
         let name = ctx.rust_ident(&self.canonical_name(ctx));
-        let void = helpers::ast_ty::c_void(ctx);
-        result.push(quote! {
-            #[repr(C)]
-            pub struct #name ( #void );
-        });
+
+        // For now, we will only generate vtables for classes that:
+        // - do not inherit from others (compilers merge VTable from primary parent class).
+        // - do not contain a virtual destructor (requires ordering; platforms generate different vtables).
+        if ctx.options().vtable_generation &&
+            self.comp_info.base_members().is_empty() &&
+            self.comp_info.destructor().is_none()
+        {
+            let class_ident = ctx.rust_ident(self.item_id.canonical_name(ctx));
+
+            let methods = self
+                .comp_info
+                .methods()
+                .iter()
+                .filter_map(|m| {
+                    if !m.is_virtual() {
+                        return None;
+                    }
+
+                    let function_item = ctx.resolve_item(m.signature());
+                    let function = function_item.expect_function();
+                    let signature_item = ctx.resolve_item(function.signature());
+                    let signature = match signature_item.expect_type().kind() {
+                        TypeKind::Function(ref sig) => sig,
+                        _ => panic!("Function signature type mismatch"),
+                    };
+
+                    // FIXME: Is there a canonical name without the class prepended?
+                    let function_name = function_item.canonical_name(ctx);
+
+                    // FIXME: Need to account for overloading with times_seen (separately from regular function path).
+                    let function_name = ctx.rust_ident(function_name);
+                    let (mut args, _) = utils::fnsig_arguments(ctx, signature);
+                    let (ret, _) = utils::fnsig_return_ty(ctx, signature);
+
+                    args[0] = if m.is_const() {
+                        quote! { this: *const #class_ident }
+                    } else {
+                        quote! { this: *mut #class_ident }
+                    };
+
+                    Some(quote! {
+                        pub #function_name : unsafe extern "C" fn( #( #args ),* ) #ret
+                    })
+                })
+                .collect::<Vec<_>>();
+
+            result.push(quote! {
+                #[repr(C)]
+                pub struct #name {
+                    #( #methods ),*
+                }
+            })
+        } else {
+            // For the cases we don't support, simply generate an empty struct.
+            let void = helpers::ast_ty::c_void(ctx);
+
+            result.push(quote! {
+                #[repr(C)]
+                pub struct #name ( #void );
+            });
+        }
     }
 }
 
@@ -1282,9 +1346,7 @@ impl<'a> FieldCodegen<'a> for FieldData {
         let field_item =
             self.ty().into_resolver().through_type_refs().resolve(ctx);
         let field_ty = field_item.expect_type();
-        let ty = self
-            .ty()
-            .to_rust_ty_or_opaque(ctx, &());
+        let ty = self.ty().to_rust_ty_or_opaque(ctx, &());
         let (mut ty, ty_annotations) = ty.to_outer_type();
         ty.append_implicit_template_params(ctx, field_item);
 
@@ -1350,10 +1412,13 @@ impl<'a> FieldCodegen<'a> for FieldData {
             self.annotations().accessor_kind().unwrap_or(accessor_kind);
 
         let mut attributes = Vec::new();
-        let mut csaa = CppSemanticAttributeAdder::new(ctx.options(), &mut attributes);
+        let mut csaa =
+            CppSemanticAttributeAdder::new(ctx.options(), &mut attributes);
         match ty_annotations {
             RustTyAnnotation::Reference => csaa.field_type_reference(),
-            RustTyAnnotation::RValueReference => csaa.field_type_rvalue_reference(),
+            RustTyAnnotation::RValueReference => {
+                csaa.field_type_rvalue_reference()
+            }
             _ => {}
         };
 
@@ -1795,8 +1860,7 @@ impl CodeGenerator for CompInfo {
 
         if !is_opaque {
             if item.has_vtable_ptr(ctx) {
-                let vtable =
-                    Vtable::new(item.id(), self.methods(), self.base_members());
+                let vtable = Vtable::new(item.id(), self);
                 vtable.codegen(ctx, result, item);
 
                 let vtable_type = vtable
@@ -2021,7 +2085,8 @@ impl CodeGenerator for CompInfo {
         } else {
             attributes.push(attributes::repr("C"));
         }
-        let mut semantic_annotations = CppSemanticAttributeAdder::new(ctx.options(), &mut attributes);
+        let mut semantic_annotations =
+            CppSemanticAttributeAdder::new(ctx.options(), &mut attributes);
         if unused_template_params {
             semantic_annotations.discards_template_param();
         }
@@ -2041,7 +2106,7 @@ impl CodeGenerator for CompInfo {
             }
         }
 
-        let derivable_traits = derives_of_item(item, ctx);
+        let derivable_traits = derives_of_item(item, ctx, packed);
         if !derivable_traits.contains(DerivableTraits::DEBUG) {
             needs_debug_impl = ctx.options().derive_debug &&
                 ctx.options().impl_debug &&
@@ -2089,13 +2154,15 @@ impl CodeGenerator for CompInfo {
 
         if let Some(original_name) = item.original_name(ctx) {
             if canonical_name != original_name {
-                let mut semantic_annotations = CppSemanticAttributeAdder::new(ctx.options(), &mut attributes);
+                let mut semantic_annotations = CppSemanticAttributeAdder::new(
+                    ctx.options(),
+                    &mut attributes,
+                );
                 semantic_annotations.original_name(&original_name);
             }
         }
 
-        if item.annotations().must_use_type() || ctx.must_use_type_by_name(item)
-        {
+        if item.must_use(ctx) {
             attributes.push(attributes::must_use());
         }
 
@@ -2189,32 +2256,38 @@ impl CodeGenerator for CompInfo {
                     {
                         vec![]
                     } else {
-                        let asserts = self.fields()
-                                .iter()
-                                .filter_map(|field| match *field {
-                                    Field::DataMember(ref f) if f.name().is_some() => Some(f),
-                                    _ => None,
-                                })
-                                .flat_map(|field| {
-                                    let name = field.name().unwrap();
-                                    field.offset().map(|offset| {
-                                        let field_offset = offset / 8;
-                                        let field_name = ctx.rust_ident(name);
-
-                                        quote! {
+                        self.fields()
+                            .iter()
+                            .filter_map(|field| match *field {
+                                Field::DataMember(ref f) if f.name().is_some() => Some(f),
+                                _ => None,
+                            })
+                            .flat_map(|field| {
+                                let name = field.name().unwrap();
+                                field.offset().map(|offset| {
+                                    let field_offset = offset / 8;
+                                    let field_name = ctx.rust_ident(name);
+                                    // Put each check in its own function, so
+                                    // that rustc with opt-level=0 doesn't take
+                                    // too much stack space, see #2218.
+                                    let test_fn = Ident::new(&format!("test_field_{}", name), Span::call_site());
+                                    quote! {
+                                        fn #test_fn() {
                                             assert_eq!(
                                                 unsafe {
-                                                    &(*(::#prefix::ptr::null::<#canonical_ident>())).#field_name as *const _ as usize
+                                                    let uninit = ::#prefix::mem::MaybeUninit::<#canonical_ident>::uninit();
+                                                    let ptr = uninit.as_ptr();
+                                                    ::#prefix::ptr::addr_of!((*ptr).#field_name) as usize - ptr as usize
                                                 },
                                                 #field_offset,
                                                 concat!("Offset of field: ", stringify!(#canonical_ident), "::", stringify!(#field_name))
                                             );
                                         }
-                                    })
+                                        #test_fn();
+                                    }
                                 })
-                                .collect::<Vec<proc_macro2::TokenStream>>();
-
-                        asserts
+                            })
+                            .collect::<Vec<proc_macro2::TokenStream>>()
                     };
 
                     let item = quote! {
@@ -2436,9 +2509,13 @@ impl MethodCodegen for Method {
             _ => panic!("How in the world?"),
         };
 
-        if let (Abi::ThisCall, false) =
-            (signature.abi(), ctx.options().rust_features().thiscall_abi)
-        {
+        let supported_abi = match signature.abi() {
+            Abi::ThisCall => ctx.options().rust_features().thiscall_abi,
+            Abi::Vectorcall => ctx.options().rust_features().vectorcall_abi,
+            _ => true,
+        };
+
+        if !supported_abi {
             return;
         }
 
@@ -2646,7 +2723,6 @@ enum EnumBuilder<'a> {
         is_bitfield: bool,
     },
     Consts {
-        repr: proc_macro2::TokenStream,
         variants: Vec<proc_macro2::TokenStream>,
         codegen_depth: usize,
     },
@@ -2717,7 +2793,6 @@ impl<'a> EnumBuilder<'a> {
                 });
 
                 EnumBuilder::Consts {
-                    repr,
                     variants,
                     codegen_depth: enum_codegen_depth,
                 }
@@ -2821,7 +2896,7 @@ impl<'a> EnumBuilder<'a> {
                 self
             }
 
-            EnumBuilder::Consts { ref repr, .. } => {
+            EnumBuilder::Consts { .. } => {
                 let constant_name = match mangling_prefix {
                     Some(prefix) => {
                         Cow::Owned(format!("{}_{}", prefix, variant_name))
@@ -2829,12 +2904,10 @@ impl<'a> EnumBuilder<'a> {
                     None => variant_name,
                 };
 
-                let ty = if is_ty_named { &rust_ty } else { repr };
-
                 let ident = ctx.rust_ident(constant_name);
                 result.push(quote! {
                     #doc
-                    pub const #ident : #ty = #expr ;
+                    pub const #ident : #rust_ty = #expr ;
                 });
 
                 self
@@ -3040,7 +3113,8 @@ impl CodeGenerator for Enum {
 
         let mut attrs = vec![];
 
-        let mut semantic_annotations = CppSemanticAttributeAdder::new(ctx.options(), &mut attrs);
+        let mut semantic_annotations =
+            CppSemanticAttributeAdder::new(ctx.options(), &mut attrs);
         if let Some(original_name) = item.original_name(ctx) {
             if name != original_name {
                 semantic_annotations.original_name(&original_name);
@@ -3075,21 +3149,16 @@ impl CodeGenerator for Enum {
             attrs.push(attributes::doc(comment));
         }
 
-        if item.annotations().must_use_type() || ctx.must_use_type_by_name(item)
-        {
+        if item.must_use(ctx) {
             attrs.push(attributes::must_use());
         }
 
         if !variation.is_const() {
-            let mut derives = derives_of_item(item, ctx);
-            // For backwards compat, enums always derive Debug/Clone/Eq/PartialEq/Hash, even
-            // if we don't generate those by default.
-            if !item.annotations().disallow_debug() {
-                derives.insert(DerivableTraits::DEBUG);
-            }
-            if !item.annotations().disallow_copy() {
-                derives.insert(DerivableTraits::COPY);
-            }
+            let packed = false; // Enums can't be packed in Rust.
+            let mut derives = derives_of_item(item, ctx, packed);
+            // For backwards compat, enums always derive
+            // Clone/Eq/PartialEq/Hash, even if we don't generate those by
+            // default.
             derives.insert(
                 DerivableTraits::CLONE |
                     DerivableTraits::HASH |
@@ -3643,7 +3712,8 @@ impl RustTy {
         inner: RustTyAnnotation,
     ) -> Self {
         let annotation = match inner {
-            RustTyAnnotation::HasUnusedTemplateArgs | RustTyAnnotation::Opaque => inner,
+            RustTyAnnotation::HasUnusedTemplateArgs |
+            RustTyAnnotation::Opaque => inner,
             _ => RustTyAnnotation::Reference,
         };
         Self { ts, annotation }
@@ -3654,7 +3724,8 @@ impl RustTy {
         inner: RustTyAnnotation,
     ) -> Self {
         let annotation = match inner {
-            RustTyAnnotation::HasUnusedTemplateArgs | RustTyAnnotation::Opaque => inner,
+            RustTyAnnotation::HasUnusedTemplateArgs |
+            RustTyAnnotation::Opaque => inner,
             _ => RustTyAnnotation::RValueReference,
         };
         Self { ts, annotation }
@@ -3751,7 +3822,9 @@ impl TryToRustTy for Type {
                     IntKind::I8 => Ok(quote! { i8 }.into()),
                     IntKind::U8 => Ok(quote! { u8 }.into()),
                     IntKind::I16 => Ok(quote! { i16 }.into()),
-                    IntKind::U16 if ctx.options().use_distinct_char16_t => Ok(quote! { c_char16_t }.into()),
+                    IntKind::U16 if ctx.options().use_distinct_char16_t => {
+                        Ok(quote! { c_char16_t }.into())
+                    }
                     IntKind::U16 => Ok(quote! { u16 }.into()),
                     IntKind::I32 => Ok(quote! { i32 }.into()),
                     IntKind::U32 => Ok(quote! { u32 }.into()),
@@ -4044,6 +4117,12 @@ impl TryToRustTy for FunctionSig {
                 warn!("Skipping function with thiscall ABI that isn't supported by the configured Rust target");
                 Ok(proc_macro2::TokenStream::new().into())
             }
+            Abi::Vectorcall
+                if !ctx.options().rust_features().vectorcall_abi =>
+            {
+                warn!("Skipping function with vectorcall ABI that isn't supported by the configured Rust target");
+                Ok(proc_macro2::TokenStream::new().into())
+            }
             _ => Ok(quote! {
                 unsafe extern #abi fn ( #( #arguments ),* ) #ret
             }
@@ -4075,17 +4154,24 @@ impl CodeGenerator for Function {
             Linkage::External => {}
         }
 
-        // Pure virtual methods have no actual symbol, so we can't generate
-        // something meaningful for them.
         let is_pure_virtual = match self.kind() {
-            FunctionKind::Method(ref method_kind)
-                if method_kind.is_pure_virtual() =>
-            {
-                true
+            FunctionKind::Method(ref method_kind) => {
+                method_kind.is_pure_virtual()
             }
             _ => false,
         };
-        let is_virtual = matches!(self.kind(), FunctionKind::Method(MethodKind::Virtual { .. }));
+
+        let is_virtual = matches!(
+            self.kind(),
+            FunctionKind::Method(MethodKind::Virtual { .. })
+        );
+
+        let is_dynamic_function = match self.kind() {
+            FunctionKind::Function => {
+                ctx.options().dynamic_library_name.is_some()
+            }
+            _ => false,
+        };
 
         // Similar to static member variables in a class template, we can't
         // generate bindings to template functions, because the set of
@@ -4123,17 +4209,27 @@ impl CodeGenerator for Function {
         let mut attributes = args_attrs;
         attributes.push(ret_attr);
 
-        if signature.must_use() &&
-            ctx.options().rust_features().must_use_function
-        {
-            attributes.push(attributes::must_use());
+        if ctx.options().rust_features().must_use_function {
+            let must_use = signature.must_use() || {
+                let ret_ty = signature
+                    .return_type()
+                    .into_resolver()
+                    .through_type_refs()
+                    .resolve(ctx);
+                ret_ty.must_use(ctx)
+            };
+
+            if must_use {
+                attributes.push(attributes::must_use());
+            }
         }
 
         if let Some(comment) = item.comment(ctx) {
             attributes.push(attributes::doc(comment));
         }
 
-        let mut semantic_annotations = CppSemanticAttributeAdder::new(&ctx.options(), &mut attributes);
+        let mut semantic_annotations =
+            CppSemanticAttributeAdder::new(&ctx.options(), &mut attributes);
 
         if is_pure_virtual {
             semantic_annotations.is_pure_virtual();
@@ -4148,6 +4244,12 @@ impl CodeGenerator for Function {
         let abi = match signature.abi() {
             Abi::ThisCall if !ctx.options().rust_features().thiscall_abi => {
                 warn!("Skipping function with thiscall ABI that isn't supported by the configured Rust target");
+                return None;
+            }
+            Abi::Vectorcall
+                if !ctx.options().rust_features().vectorcall_abi =>
+            {
+                warn!("Skipping function with vectorcall ABI that isn't supported by the configured Rust target");
                 return None;
             }
             Abi::Win64 if signature.is_variadic() => {
@@ -4181,11 +4283,13 @@ impl CodeGenerator for Function {
         }
 
         let link_name = mangled_name.unwrap_or(name);
-        if !utils::names_will_be_identical_after_mangling(
-            &canonical_name,
-            link_name,
-            Some(abi),
-        ) {
+        if !is_dynamic_function &&
+            !utils::names_will_be_identical_after_mangling(
+                &canonical_name,
+                link_name,
+                Some(abi),
+            )
+        {
             attributes.push(attributes::link_name(link_name));
         }
 
@@ -4207,9 +4311,7 @@ impl CodeGenerator for Function {
         };
 
         // If we're doing dynamic binding generation, add to the dynamic items.
-        if ctx.options().dynamic_library_name.is_some() &&
-            self.kind() == FunctionKind::Function
-        {
+        if is_dynamic_function {
             let args_identifiers =
                 utils::fnsig_argument_identifiers(ctx, signature);
             let return_item = ctx.resolve_item(signature.return_type());
@@ -4228,6 +4330,7 @@ impl CodeGenerator for Function {
                 args_identifiers,
                 ret,
                 ret_ty,
+                attributes,
             );
         } else {
             result.push(tokens);
@@ -4264,9 +4367,7 @@ fn objc_method_codegen(
 
     let body = if method.is_class_method() {
         let class_name = ctx.rust_ident(
-            class_name
-                .expect("Generating a class method without class name?")
-                .to_owned(),
+            class_name.expect("Generating a class method without class name?"),
         );
         quote! {
             msg_send!(class!(#class_name), #methods_and_args)
@@ -4334,7 +4435,7 @@ impl CodeGenerator for ObjCInterface {
                 .collect();
 
             quote! {
-                pub trait #trait_name <#(#template_names),*> : #trait_constraints {
+                pub trait #trait_name <#(#template_names:'static),*> : #trait_constraints {
                     #( #impl_items )*
                 }
             }
@@ -4350,7 +4451,7 @@ impl CodeGenerator for ObjCInterface {
         if !self.is_category() && !self.is_protocol() {
             let struct_block = quote! {
                 #[repr(transparent)]
-                #[derive(Clone)]
+                #[derive(Debug, Copy, Clone)]
                 pub struct #class_name(pub id);
                 impl std::ops::Deref for #class_name {
                     type Target = objc::runtime::Object;
@@ -4364,7 +4465,7 @@ impl CodeGenerator for ObjCInterface {
                 impl #class_name {
                     pub fn alloc() -> Self {
                         Self(unsafe {
-                            msg_send!(objc::class!(#class_name), alloc)
+                            msg_send!(class!(#class_name), alloc)
                         })
                     }
                 }
@@ -4546,10 +4647,10 @@ pub(crate) fn codegen(
 }
 
 pub mod utils {
-    use super::{
-        error, RustTy, RustTyAnnotation, ToRustTyOrOpaque,
+    use super::{error, RustTy, RustTyAnnotation, ToRustTyOrOpaque};
+    use crate::codegen::helpers::{
+        CppSemanticAttributeCreator, CppSemanticAttributeSingle,
     };
-    use crate::codegen::helpers::{CppSemanticAttributeSingle, CppSemanticAttributeCreator};
     use crate::ir::context::BindgenContext;
     use crate::ir::function::{Abi, FunctionSig};
     use crate::ir::item::{Item, ItemCanonicalPath};
@@ -4589,7 +4690,7 @@ pub mod utils {
             }
         } else {
             quote! {
-                use objc;
+                use objc::{self, msg_send, sel, sel_impl, class};
             }
         };
 
@@ -4879,23 +4980,21 @@ pub mod utils {
             let ts = quote! {
                 -> #ret_ty
             };
-            let mut semantic_annotation = CppSemanticAttributeSingle::new(ctx.options());
+            let mut semantic_annotation =
+                CppSemanticAttributeSingle::new(ctx.options());
             match annotations {
-                super::RustTyAnnotation::None => {},
+                super::RustTyAnnotation::None => {}
                 super::RustTyAnnotation::Reference => {
                     semantic_annotation.ret_type_reference()
                 }
                 super::RustTyAnnotation::RValueReference => {
                     semantic_annotation.ret_type_rvalue_reference()
                 }
-                super::RustTyAnnotation::HasUnusedTemplateArgs | super::RustTyAnnotation::Opaque => {
-                    semantic_annotation.incomprehensible_param_in_arg_or_return()
-                }
+                super::RustTyAnnotation::HasUnusedTemplateArgs |
+                super::RustTyAnnotation::Opaque => semantic_annotation
+                    .incomprehensible_param_in_arg_or_return(),
             };
-            (
-                ts,
-                semantic_annotation.result()
-            )
+            (ts, semantic_annotation.result())
         }
     }
 
@@ -4963,25 +5062,26 @@ pub mod utils {
 
                 assert!(!arg_name.is_empty());
                 let arg_name = ctx.rust_ident(arg_name);
-                let mut semantic_annotation = CppSemanticAttributeSingle::new(ctx.options());
+                let mut semantic_annotation =
+                    CppSemanticAttributeSingle::new(ctx.options());
                 match arg_details.annotation {
-                    RustTyAnnotation::None => {},
+                    RustTyAnnotation::None => {}
                     RustTyAnnotation::Reference => {
                         semantic_annotation.arg_type_reference(&arg_name)
                     }
                     RustTyAnnotation::RValueReference => {
                         semantic_annotation.arg_type_rvalue_reference(&arg_name)
                     }
-                    RustTyAnnotation::HasUnusedTemplateArgs | RustTyAnnotation::Opaque => {
-                        semantic_annotation.incomprehensible_param_in_arg_or_return()
-                    }
+                    RustTyAnnotation::HasUnusedTemplateArgs |
+                    RustTyAnnotation::Opaque => semantic_annotation
+                        .incomprehensible_param_in_arg_or_return(),
                 };
 
                 (
                     quote! {
                         #arg_name : #arg_ty
                     },
-                    semantic_annotation.result()
+                    semantic_annotation.result(),
                 )
             })
             .unzip();

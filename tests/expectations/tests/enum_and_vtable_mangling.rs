@@ -14,7 +14,9 @@ pub enum _bindgen_ty_1 {
     whatever_else = 1,
 }
 #[repr(C)]
-pub struct C__bindgen_vtable(::std::os::raw::c_void);
+pub struct C__bindgen_vtable {
+    pub C_match: unsafe extern "C" fn(this: *mut C),
+}
 #[repr(C)]
 #[derive(Debug, Copy, Clone)]
 pub struct C {
@@ -33,11 +35,18 @@ fn bindgen_test_layout_C() {
         8usize,
         concat!("Alignment of ", stringify!(C))
     );
-    assert_eq!(
-        unsafe { &(*(::std::ptr::null::<C>())).i as *const _ as usize },
-        8usize,
-        concat!("Offset of field: ", stringify!(C), "::", stringify!(i))
-    );
+    fn test_field_i() {
+        assert_eq!(
+            unsafe {
+                let uninit = ::std::mem::MaybeUninit::<C>::uninit();
+                let ptr = uninit.as_ptr();
+                ::std::ptr::addr_of!((*ptr).i) as usize - ptr as usize
+            },
+            8usize,
+            concat!("Offset of field: ", stringify!(C), "::", stringify!(i))
+        );
+    }
+    test_field_i();
 }
 impl Default for C {
     fn default() -> Self {

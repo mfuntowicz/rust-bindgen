@@ -6,7 +6,10 @@
 )]
 
 #[repr(C)]
-pub struct nsISupports__bindgen_vtable(::std::os::raw::c_void);
+pub struct nsISupports__bindgen_vtable {
+    pub nsISupports_QueryInterface:
+        unsafe extern "C" fn(this: *mut nsISupports) -> *mut nsISupports,
+}
 #[repr(C)]
 #[derive(Debug, Copy, Clone)]
 pub struct nsISupports {
