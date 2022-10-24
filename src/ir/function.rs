@@ -123,8 +123,11 @@ pub struct Function {
     /// C++ visibility
     visibility: Visibility,
 
-    /// Whether it's deleted (=default)
+    /// Whether it's deleted (=delete)
     is_deleted: bool,
+
+    /// Whether it's explicitly defaulted (=default)
+    is_defaulted: bool,
 }
 
 impl Function {
@@ -139,6 +142,7 @@ impl Function {
         special_member: Option<SpecialMemberKind>,
         visibility: Visibility,
         is_deleted: bool,
+        is_defaulted: bool,
     ) -> Self {
         Function {
             name,
@@ -150,6 +154,7 @@ impl Function {
             special_member,
             visibility,
             is_deleted,
+            is_defaulted,
         }
     }
 
@@ -196,6 +201,11 @@ impl Function {
     /// Whether this is a function that's been deleted (=delete)
     pub fn deleted_fn(&self) -> bool {
         self.is_deleted
+    }
+
+    /// Whether this is a function that's been deleted (=delete)
+    pub fn defaulted_fn(&self) -> bool {
+        self.is_defaulted
     }
 }
 
@@ -722,6 +732,7 @@ impl ClangSubItemParser for Function {
             special_member,
             visibility,
             cursor.is_deleted_function(),
+            cursor.is_defaulted_function(),
         );
         Ok(ParseResult::New(function, Some(cursor)))
     }
