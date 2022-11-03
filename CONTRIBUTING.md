@@ -152,6 +152,9 @@ $ cargo test
 
 ### Testing a Single Header's Bindings Generation and Compiling its Bindings
 
+Note: You will to need to install [Graphviz](https://graphviz.org/) since that
+is a dependency for running `test-one.sh`.
+
 Sometimes its useful to work with one test header from start (generating
 bindings for it) to finish (compiling the bindings and running their layout
 tests). This can be done with the `tests/test-one.sh` script. It supports fuzzy
@@ -315,7 +318,19 @@ parameters a given type uses. The analyses are defined in
 
 The final phase is generating Rust source text from the analyzed IR, and it is
 defined in `src/codegen/*`. We use the `quote` crate, which provides the `quote!
-{ ... }` macro for quasi-quoting Rust forms.
+{ ... }` macro for quasi-quoting Rust forms. Some options that affect the
+generated Rust code are implemented using the [`syn`](https://docs.rs/syn) crate.
+
+### Implementing new options using `syn`
+
+If a new option can be implemented using the `syn` crate it should be added to
+the `codegen::postprocessing` module by following these steps:
+
+- Introduce a new field to `BindgenOptions` for the option.
+- Write a free function inside `codegen::postprocessing` implementing the
+  option. This function with the same name of the `BindgenOptions` field.
+- Add a new value to the `codegen::postprocessing::PASSES` for the option using
+  the `pass!` macro.
 
 ## Pull Requests and Code Reviews
 
@@ -404,7 +419,7 @@ $ brew install creduce
 $ # Etc...
 ```
 
-[Otherwise, follow these instructions for building and/or installing `creduce`.](https://github.com/csmith-project/creduce/blob/master/INSTALL)
+Otherwise, follow [these instructions](https://github.com/csmith-project/creduce/blob/master/INSTALL.md) for building and/or installing `creduce`.
 
 Running `creduce` requires two things:
 
