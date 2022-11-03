@@ -22,7 +22,7 @@ build = "build.rs"
 rust-version = "1.57.0"
 
 [lib]
-name = "bindgen"
+name = "autocxx_bindgen"
 path = "./lib.rs"
 
 [dependencies]
