@@ -4404,6 +4404,9 @@ impl CodeGenerator for Function {
         if self.deleted_fn() {
             semantic_annotations.deleted_fn();
         }
+        if self.defaulted_fn() {
+            semantic_annotations.defaulted_fn();
+        }
 
         let link_name = mangled_name.unwrap_or(name);
         if !is_dynamic_function &&

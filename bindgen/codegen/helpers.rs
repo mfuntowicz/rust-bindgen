@@ -166,6 +166,10 @@ pub trait CppSemanticAttributeCreator {
         self.add_ident("deleted")
     }
 
+    fn defaulted_fn(&mut self) {
+        self.add_ident("defaulted")
+    }
+
     fn layout(&mut self, layout: &Layout) {
         let sz = ast_ty::int_expr(layout.size as i64);
         let align = ast_ty::int_expr(layout.align as i64);
