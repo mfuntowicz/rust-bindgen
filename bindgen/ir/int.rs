@@ -54,8 +54,11 @@ pub enum IntKind {
     /// A 16-bit signed integer.
     I16,
 
-    /// Either a `char16_t` or a `wchar_t`.
+    /// A 16-bit integer, used only for enum size representation.
     U16,
+
+    /// Either a `char16_t` or a `wchar_t`.
+    Char16,
 
     /// A 32-bit signed integer.
     I32,
@@ -93,7 +96,7 @@ impl IntKind {
             // TODO(emilio): wchar_t can in theory be signed, but we have no way
             // to know whether it is or not right now (unlike char, there's no
             // WChar_S / WChar_U).
-            Bool | UChar | UShort | UInt | ULong | ULongLong | U8 | U16 |
+            Bool | UChar | UShort | UInt | ULong | ULongLong | U8 | U16 | Char16 |
             WChar | U32 | U64 | U128 => false,
 
             SChar | Short | Int | Long | LongLong | I8 | I16 | I32 | I64 |
@@ -112,7 +115,7 @@ impl IntKind {
         use self::IntKind::*;
         Some(match *self {
             Bool | UChar | SChar | U8 | I8 | Char { .. } => 1,
-            U16 | I16 => 2,
+            U16 | I16 | Char16 => 2,
             U32 | I32 => 4,
             U64 | I64 => 8,
             I128 | U128 => 16,
