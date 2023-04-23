@@ -386,6 +386,7 @@ pub mod ast_ty {
                     }
                 }
             }
+            (FloatKind::Half, _) => quote! { u16 },
             (FloatKind::Float128, _) => {
                 if ctx.options().rust_features.i128_and_u128 {
                     quote! { u128 }

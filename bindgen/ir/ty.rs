@@ -569,6 +569,8 @@ impl TemplateParameters for TypeKind {
 /// The kind of float this type represents.
 #[derive(Debug, Copy, Clone, PartialEq, Eq)]
 pub enum FloatKind {
+    /// A `__float16`
+    Half,
     /// A `float`.
     Float,
     /// A `double`.
@@ -1161,8 +1163,8 @@ impl Type {
                         location,
                         None,
                         ctx,
-                    )
-                    .expect("Not able to resolve vector element?");
+                    )?;
+                    // .expect("Not able to resolve vector element?");
                     TypeKind::Vector(inner, ty.num_elements().unwrap())
                 }
                 CXType_ConstantArray => {

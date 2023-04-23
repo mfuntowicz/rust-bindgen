@@ -1964,6 +1964,7 @@ If you encounter an error missing from this list, please file an issue or a PR!"
                 let float_type =
                     ty.elem_type().expect("Not able to resolve complex type?");
                 let float_kind = match float_type.kind() {
+                    CXType_Float16 => FloatKind::Half,
                     CXType_Float => FloatKind::Float,
                     CXType_Double => FloatKind::Double,
                     CXType_LongDouble => FloatKind::LongDouble,
